@@ -271,66 +271,64 @@ st.markdown("""
         /* Lý do: Nó làm chuột click "xuyên qua" ảnh trúng vào nền web, gây mất focus */
         pointer-events: none; 
     }
-    /* 1. Ẩn checkbox đi, chỉ dùng để lưu trạng thái logic */
+    * 1. Ẩn ô checkbox (chỉ dùng để lưu trạng thái đóng/mở) */
     .lightbox-toggle { display: none; }
 
-    /* 2. Container tạo thanh cuộn ngang cho danh sách ảnh */
+    /* 2. Khung cuộn ngang chứa danh sách ảnh */
     .screenshot-scroll { 
         overflow-x: auto; 
         white-space: nowrap; 
-        padding-bottom: 15px;
+        padding-bottom: 10px;
         scrollbar-width: thin;
-        -webkit-overflow-scrolling: touch; /* Mượt hơn trên Mac/Touchpad */
     }
 
-    /* 3. Ảnh Thumbnail (nhỏ) hiển thị trên màn hình */
+    /* 3. Style cho ảnh THUMBNAIL (Ảnh nhỏ hiển thị trên web) */
     .thumb-label {
         display: inline-block;
         margin-right: 12px;
         cursor: zoom-in;
         transition: transform 0.2s;
-        border-radius: 12px;
-        overflow: hidden;
         border: 1px solid #444;
+        border-radius: 8px;
     }
     .thumb-label:hover { transform: scale(1.02); border-color: #64b5f6; }
     
     .thumb-img {
-        height: 200px; /* Chiều cao cố định cho hàng ảnh */
+        height: 200px; /* Chiều cao cố định */
         width: auto;
         display: block;
+        border-radius: 8px;
     }
 
-    /* 4. Lớp phủ Fullscreen (Mặc định ẩn) */
+    /* 4. Màn hình đen phủ kín (OVERLAY) - Mặc định ẩn */
     .lightbox-overlay {
-        display: none; /* Mặc định ẩn */
+        display: none; /* Ẩn */
         position: fixed;
         top: 0; left: 0;
         width: 100vw; height: 100vh;
-        background: rgba(0, 0, 0, 0.95); /* Nền đen đậm */
-        z-index: 999999; /* Luôn nổi lên trên cùng */
+        background: rgba(0, 0, 0, 0.95); /* Nền đen 95% */
+        z-index: 999999; /* Luôn nằm trên cùng */
         justify-content: center;
         align-items: center;
         cursor: zoom-out;
         backdrop-filter: blur(5px);
     }
 
-    /* 5. LOGIC CHÍNH: Khi Input được Check -> Tìm thẻ Overlay nằm cùng cấp và Hiển thị nó */
+    /* 5. LOGIC KÍCH HOẠT: Khi checkbox được chọn -> Hiện Overlay */
     .lightbox-toggle:checked ~ .lightbox-overlay {
         display: flex;
         animation: fadeIn 0.2s ease-out;
     }
 
-    /* 6. Ảnh to bên trong overlay */
+    /* 6. Ảnh phóng to bên trong */
     .full-img {
         max-width: 95%;
         max-height: 95%;
         object-fit: contain;
-        border-radius: 4px;
-        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+        box-shadow: 0 0 20px rgba(0,0,0,0.5);
     }
 
-    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+    @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 </style>
 """, unsafe_allow_html=True)
 # --- 6. BACKEND FUNCTIONS ---
@@ -713,27 +711,25 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         else: 
                             st.error("Không phản hồi từ Server.")
 
-        # TAB 2: MEDIA (CẬP NHẬT: CHECKBOX HACK AN TOÀN)
+        # --- BƯỚC 2: THAY THẾ TOÀN BỘ CODE TRONG TAB 2 ---
         with tab2:
-            # Video Trailer
+            # 1. Video (Giữ nguyên)
             if d.get('video'):
                 st.subheader("🎥 Video Trailer")
                 st.video(d.get('video'))
                 st.divider()
             
-            # Screenshots
+            # 2. Screenshots (Logic mới: An toàn & Mượt mà)
             if d.get('screenshots'):
                 st.subheader("🖼️ Screenshots")
-                st.caption("💡 Click vào ảnh để phóng to. Click vào vùng đen để đóng.")
+                st.caption("💡 Click ảnh để phóng to. Click vùng đen để đóng.")
 
-                # Tạo container cuộn ngang
                 html_content = '<div class="screenshot-scroll">'
                 
-                # Tạo ID cơ sở duy nhất để tránh xung đột giữa các lần render
-                base_id = d.get('appId', 'unknown').replace('.', '_')
+                # Tạo ID cơ sở để checkbox hoạt động độc lập
+                base_id = d.get('appId', 'app').replace('.', '_')
                 
                 for i, url in enumerate(d.get('screenshots')):
-                    # Mỗi ảnh có 1 ID riêng biệt
                     unique_id = f"img_{base_id}_{i}"
                     
                     html_content += f"""
