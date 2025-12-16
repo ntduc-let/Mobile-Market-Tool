@@ -321,29 +321,14 @@ sel_country_lbl = st.sidebar.selectbox("Quốc Gia", list(COUNTRIES_LIST.keys())
 sel_cat_lbl = st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))
 target_country = COUNTRIES_LIST[sel_country_lbl]
 target_cat = CATEGORIES_LIST[sel_cat_lbl]
-if st.sidebar.button("🚀 Quét Chart", type="primary"):
-    with st.status("Đang quét..."):
-        try:
-            # Thêm capture_output=True để bắt lấy nội dung lỗi từ Node.js
-            result = subprocess.run(
-                ["node", NODE_SCRIPT, "LIST", target_cat, target_country], 
-                check=True, 
-                text=True, 
-                capture_output=True
-            )
-            
-            if save_data_to_db(target_cat, target_country):
-                st.session_state.view_mode = 'list'
-                st.rerun()
-            else: 
-                st.error("Không lưu được vào Database.")
-                
-        except subprocess.CalledProcessError as e:
-            # IN RA LỖI THỰC SỰ
-            st.error(f"❌ Lỗi chạy Node.js (Exit Code {e.returncode})")
-            st.code(e.stderr, language="bash") # Hiển thị thông báo lỗi từ Terminal lên Web
-        except Exception as ex:
-            st.error(f"❌ Lỗi không xác định: {str(ex)}")
+if st.button("🚀 Quét Chart"):
+    # Chạy thẳng lệnh node, nó sẽ tự tìm thư viện trong folder node_modules bạn đã up
+    try:
+        subprocess.run(["node", "scraper.js", "LIST", target_cat, target_country], check=True)
+        st.success("Đã chạy xong!")
+        st.rerun()
+    except subprocess.CalledProcessError as e:
+        st.error("Lỗi chạy Node.js")
 
 # --- MAIN VIEW ---
 
