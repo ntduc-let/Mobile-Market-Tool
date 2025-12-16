@@ -10,61 +10,6 @@ import plotly.express as px
 import re
 import time
 
-# --- 1. HÀM CÀI ĐẶT NODE MODULES TỰ ĐỘNG ---
-def ensure_node_modules():
-    # Kiểm tra xem folder node_modules đã tồn tại chưa
-    if not os.path.exists('node_modules'):
-        with st.spinner('Đang cài đặt thư viện Node.js (Lần đầu chạy sẽ hơi lâu)...'):
-            try:
-                # Chạy npm install
-                subprocess.run(['npm', 'install'], check=True, shell=True)
-                st.success('Cài đặt môi trường Node thành công!')
-            except subprocess.CalledProcessError as e:
-                st.error(f"Lỗi khi cài npm: {e}")
-                st.stop() # Dừng app nếu không cài được
-
-# --- 2. HÀM GỌI NODE JS TỪ PYTHON ---
-def scrape_google_play_node(app_id):
-    try:
-        # Gọi lệnh: node worker.js <app_id>
-        # capture_output=True để bắt lấy cái console.log từ file JS
-        result = subprocess.run(
-            ['node', 'worker.js', app_id], 
-            capture_output=True, 
-            text=True, 
-            check=True
-        )
-        
-        # Parse chuỗi JSON nhận được từ Node
-        data = json.loads(result.stdout)
-        return data
-        
-    except subprocess.CalledProcessError as e:
-        return {"error": f"Lỗi Runtime Node: {e.stderr}"}
-    except json.JSONDecodeError:
-        return {"error": "Không đọc được dữ liệu trả về từ Node (Có thể do in thừa log)"}
-
-# --- 3. GIAO DIỆN STREAMLIT ---
-st.title("Tool Mobile Market (Node.js Core)")
-
-# Chạy cài đặt dependencies ngay khi app khởi động
-ensure_node_modules()
-
-app_id_input = st.text_input("Nhập App ID (ví dụ: com.zhiliaoapp.musically)", "com.zhiliaoapp.musically")
-
-if st.button("Lấy thông tin"):
-    if app_id_input:
-        st.info(f"Đang request node worker cho: {app_id_input}")
-        
-        # Gọi hàm
-        data = scrape_google_play_node(app_id_input)
-        
-        if "error" in data:
-            st.error(data["error"])
-        else:
-            st.success("Thành công!")
-            st.json(data) # Hiển thị kết quả JSON đẹp
-
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
