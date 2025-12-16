@@ -17,7 +17,6 @@ DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
 # --- 2. [QUAN TRỌNG] TỰ ĐỘNG CÀI ĐẶT NODE.JS ---
-# Hàm này giữ cho App chạy được trên Cloud (Fix lỗi thiếu thư viện)
 def init_environment():
     # Tạo thư mục data
     if not os.path.exists('data'):
@@ -246,11 +245,8 @@ def run_node_safe(mode, target, country, output_file, token=None):
     try:
         args = ["node", NODE_SCRIPT, mode, target, country]
         if token: args.append(token)
-        # Timeout 90s để tránh treo
         subprocess.run(args, capture_output=True, text=True, check=True, timeout=90)
     except subprocess.CalledProcessError as e:
-        # Debug lỗi nếu cần
-        # print(e.stderr)
         return None
     except Exception: return None
 
@@ -298,13 +294,6 @@ def load_data_today(cat, country):
         df = pd.read_sql(f"SELECT * FROM app_history WHERE category='{cat}' AND country='{country}' AND strftime('%Y-%m-%d', scraped_at)='{today}'", conn)
         conn.close(); return df
     except: conn.close(); return pd.DataFrame()
-
-def load_app_history(app_id, country):
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        df = pd.read_sql(f"SELECT scraped_at, rank, collection_type FROM app_history WHERE app_id='{app_id}' AND country='{country}' ORDER BY scraped_at ASC", conn)
-        conn.close(); return df
-    except: return pd.DataFrame()
 
 # --- 7. UI COMPONENTS ---
 def render_mini_card(app, country, rank_idx, key_prefix):
@@ -494,18 +483,10 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
         </div>
         """, unsafe_allow_html=True)
 
-        tab1, tab2, tab3, tab4, tab5 = st.tabs(["📉 Retention", "📊 Reviews", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Thông tin"])
+        # Đã xóa tab Retention
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Reviews", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Thông tin"])
 
         with tab1:
-            df_hist = load_app_history(d['appId'], curr_country)
-            if len(df_hist) > 1:
-                fig = px.line(df_hist, x='scraped_at', y='rank', color='collection_type', markers=True, title="Lịch sử thứ hạng")
-                fig.update_yaxes(autorange="reversed")
-                fig.update_layout(plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ccc')
-                st.plotly_chart(fig, use_container_width=True)
-            else: st.info("Cần quét thêm dữ liệu vào ngày mai để vẽ biểu đồ.")
-
-        with tab2:
             c_filter, c_hist = st.columns([2, 3])
             with c_filter:
                 rev_filter = st.selectbox("Lọc đánh giá:", ["Tất cả", "Tích cực (4-5 ⭐)", "Tiêu cực (1-3 ⭐)"])
@@ -544,7 +525,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         st.session_state.next_token = more.get('nextToken')
                         st.rerun()
 
-        with tab3:
+        with tab2:
             sims = st.session_state.similar_apps
             if sims:
                 filtered_sims = [s for s in sims if s['appId'] != d['appId']]
@@ -554,7 +535,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 else: st.warning("Không có đối thủ khác.")
             else: st.info("Chưa tìm thấy dữ liệu.")
 
-        with tab4:
+        with tab3:
             devs = st.session_state.dev_apps
             if devs:
                 filtered_devs = [dv for dv in devs if dv['appId'] != d['appId']]
@@ -564,7 +545,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 else: st.info("Dev này chỉ có 1 app này.")
             else: st.info("Chưa tìm thấy dữ liệu.")
 
-        with tab5:
+        with tab4:
             c_tech, c_contact = st.columns(2)
             with c_tech:
                 st.markdown("#### 📱 Kỹ thuật")
