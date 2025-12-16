@@ -11,54 +11,50 @@ import re
 import time
 import shutil
 
+# --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 🛠 HỆ THỐNG TỰ ĐỘNG SỬA LỖI NODE.JS (AUTO-FIX) ---
+# --- 1. TỰ ĐỘNG CÀI ĐẶT & CẤU HÌNH NODE.JS (AUTO-FIX) ---
 def ensure_node_environment():
-    """Đảm bảo môi trường Node.js và thư viện Scraper luôn sẵn sàng"""
-    
-    # 1. Xác định đường dẫn tuyệt đối
+    """Đảm bảo thư viện Google Play Scraper luôn sẵn sàng"""
     current_dir = os.getcwd()
-    node_modules_path = os.path.join(current_dir, "node_modules")
-    lib_path = os.path.join(node_modules_path, "google-play-scraper")
+    node_path = os.path.join(current_dir, "node_modules")
     
-    # Biến môi trường để ép Node tìm đúng chỗ
-    os.environ["NODE_PATH"] = node_modules_path
-
-    # 2. Kiểm tra xem thư viện đã cài chưa
-    if not os.path.exists(lib_path):
+    # QUAN TRỌNG: Ép môi trường Python nhận diện đường dẫn Node
+    os.environ["NODE_PATH"] = node_path
+    
+    # Kiểm tra xem thư viện đã cài chưa
+    lib_check = os.path.join(node_path, "google-play-scraper")
+    if not os.path.exists(lib_check):
         placeholder = st.empty()
-        with placeholder.status("⚙️ Đang thiết lập môi trường Node.js...", expanded=True) as status:
+        with placeholder.status("⚙️ Đang khởi tạo môi trường lần đầu...", expanded=True) as status:
             try:
-                # Bước A: Tạo package.json nếu chưa có (để tránh lỗi npm)
+                # B1: Tạo package.json nếu thiếu
                 if not os.path.exists("package.json"):
-                    status.write("📝 Tạo file cấu hình package.json...")
+                    status.write("📝 Tạo cấu hình package.json...")
                     with open("package.json", "w") as f:
-                        json.dump({"dependencies": {"google-play-scraper": "^10.0.0"}}, f)
-
-                # Bước B: Cài đặt thư viện trực tiếp
-                status.write("⬇️ Đang tải thư viện 'google-play-scraper'...")
-                # Dùng shell=True và cwd để đảm bảo lệnh chạy đúng thư mục gốc
-                subprocess.run("npm install google-play-scraper", shell=True, check=True, cwd=current_dir)
+                        json.dump({"dependencies": {"google-play-scraper": "^10.1.2"}}, f)
                 
-                status.update(label="✅ Cài đặt thành công! Đang tải lại...", state="complete")
+                # B2: Cài đặt
+                status.write("⬇️ Đang cài đặt thư viện Scraper...")
+                subprocess.run("npm install", shell=True, check=True, cwd=current_dir)
+                
+                status.update(label="✅ Cài đặt xong! Đang tải lại...", state="complete")
                 time.sleep(1)
-                st.rerun() # Tự động reload để áp dụng
-                
+                st.rerun()
             except Exception as e:
-                status.update(label="❌ Lỗi cài đặt", state="error")
-                st.error(f"Chi tiết lỗi: {str(e)}")
+                st.error(f"Lỗi cài đặt: {e}")
                 st.stop()
 
-# Gọi hàm này ngay đầu chương trình
+# Gọi hàm này đầu tiên để đảm bảo môi trường
 ensure_node_environment()
 
-# --- BACKEND FUNCTIONS (ĐÃ UPDATE NODE_PATH) ---
+# --- 2. HÀM CHẠY NODE.JS (ĐÃ FIX NODE_PATH) ---
 def run_node_safe(mode, target, country, output_file, token=None):
     file_path = f"data/{output_file}"
-    # Xóa file cũ để tránh đọc lại dữ liệu rác
+    # Xóa file cũ
     if os.path.exists(file_path):
         try: os.remove(file_path)
         except: pass
@@ -67,26 +63,25 @@ def run_node_safe(mode, target, country, output_file, token=None):
         args = ["node", NODE_SCRIPT, mode, target, country]
         if token: args.append(token)
         
-        # --- FIX QUAN TRỌNG: CẬP NHẬT BIẾN MÔI TRƯỜNG ---
-        # Lấy môi trường hiện tại và thêm NODE_PATH
+        # --- FIX QUAN TRỌNG: TRUYỀN BIẾN MÔI TRƯỜNG NODE_PATH ---
         my_env = os.environ.copy()
         my_env["NODE_PATH"] = os.path.join(os.getcwd(), "node_modules")
         
-        # Chạy lệnh Node với môi trường đã sửa
-        result = subprocess.run(
+        # Chạy lệnh
+        subprocess.run(
             args, 
             capture_output=True, 
             text=True, 
             check=True,
-            cwd=os.getcwd(), # Chạy tại thư mục gốc
-            env=my_env       # Truyền biến môi trường vào
+            cwd=os.getcwd(),
+            env=my_env  # <--- BẮT BUỘC PHẢI CÓ
         )
-        time.sleep(0.5) # Chờ ổ cứng ghi file
+        time.sleep(0.5) # Chờ ghi file
         
     except subprocess.CalledProcessError as e:
-        print(f"Node Error Log: {e.stderr}") # Ghi log lỗi ra console server
+        print(f"Node Error: {e.stderr}") # Log lỗi ra console server
         return None
-    except Exception as e:
+    except Exception:
         return None
 
     # Đọc kết quả
@@ -121,7 +116,7 @@ def load_data_today(cat, country):
         today = datetime.datetime.now().strftime('%Y-%m-%d')
         df = pd.read_sql(f"SELECT * FROM app_history WHERE category='{cat}' AND country='{country}' AND strftime('%Y-%m-%d', scraped_at)='{today}'", conn)
         conn.close(); return df
-    except: conn.close(); return pd.DataFrame()
+    except: return pd.DataFrame()
 
 def load_app_history(app_id, country):
     conn = sqlite3.connect(DB_PATH)
@@ -253,6 +248,7 @@ COUNTRIES_LIST = {
     "🇳🇬 Nigeria": "ng"
 }
 
+# --- STATE ---
 if 'view_mode' not in st.session_state: st.session_state.view_mode = 'list'
 if 'selected_app' not in st.session_state: st.session_state.selected_app = None
 if 'search_results' not in st.session_state: st.session_state.search_results = []
@@ -299,7 +295,7 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- HELPER: MÁY TÍNH DOANH THU ---
+# --- HELPER UI ---
 def estimate_revenue(d, country):
     tier_multiplier = 1.0 
     if country in ['us', 'jp', 'kr', 'uk', 'au', 'ca', 'de']: tier_multiplier = 5.0
@@ -315,7 +311,6 @@ def estimate_revenue(d, country):
     elif est_revenue > 1000: return f"${est_revenue/1000:.1f}K / tháng"
     else: return "< $1K / tháng"
 
-# --- CARD UI ---
 def render_mini_card(app, country, rank_idx, key_prefix):
     icon_url = app.get('icon', '') or 'https://via.placeholder.com/72?text=App'
     title = app.get('title', 'Unknown Title')
@@ -372,7 +367,7 @@ target_cat = CATEGORIES_LIST[sel_cat_lbl]
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
     with st.status("Đang quét..."):
         try:
-            # FIX: Gọi subprocess với env đã set path
+            # Dùng subprocess với env đã set path
             my_env = os.environ.copy()
             my_env["NODE_PATH"] = os.path.join(os.getcwd(), "node_modules")
             subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True, env=my_env, cwd=os.getcwd())
