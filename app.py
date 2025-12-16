@@ -485,25 +485,134 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
 
         # TAB 1: REVIEWS (Giữ nguyên hoặc cập nhật logic hiển thị review của bạn)
         with tab1:
-            st.subheader(f"Đánh giá ({len(st.session_state.current_reviews)} hiển thị)")
-            # ... (Phần code hiển thị review cũ của bạn) ...
-            if st.session_state.current_reviews:
-                for r in st.session_state.current_reviews:
-                    st.markdown(f"""<div class="review-card-modern">
-                        <b>{r.get('userName')}</b> <span style="color:#ccc">({r.get('date')})</span><br>
-                        <span style="color:#ffbd45">{'⭐'*int(r.get('score',0))}</span><br>
-                        <i>"{r.get('text')}"</i>
-                    </div>""", unsafe_allow_html=True)
-            else: st.info("Chưa có review nào.")
+            # Chia cột: Bên trái là Bộ lọc & Thống kê, Bên phải là Biểu đồ
+            c_dashboard, c_chart = st.columns([2, 3])
+            
+            with c_dashboard:
+                st.subheader("🔍 Bộ lọc & Thống kê")
+                
+                # 1. Bộ lọc Review
+                filter_option = st.selectbox(
+                    "Hiển thị đánh giá:",
+                    ["Tất cả", "Tích cực (4-5 ⭐)", "Trung bình (3 ⭐)", "Tiêu cực (1-2 ⭐)"],
+                    key="rev_filter"
+                )
+                
+                # Logic lọc danh sách review hiện có
+                all_revs = st.session_state.current_reviews
+                if filter_option == "Tích cực (4-5 ⭐)":
+                    filtered_revs = [r for r in all_revs if r.get('score', 0) >= 4]
+                elif filter_option == "Trung bình (3 ⭐)":
+                    filtered_revs = [r for r in all_revs if r.get('score', 0) == 3]
+                elif filter_option == "Tiêu cực (1-2 ⭐)":
+                    filtered_revs = [r for r in all_revs if r.get('score', 0) <= 2]
+                else:
+                    filtered_revs = all_revs
 
+                st.caption(f"Đang hiển thị: **{len(filtered_revs)}** / {len(all_revs)} đánh giá đã tải.")
+                
+            with c_chart:
+                # 2. Biểu đồ Histogram (Phân bố sao)
+                hist = d.get('histogram')
+                if hist:
+                    try:
+                        # Chuyển đổi dữ liệu histogram thành DataFrame cho Plotly
+                        # Google trả về keys dạng string "1", "2"...
+                        data_hist = {
+                            'Star': ['1', '2', '3', '4', '5'],
+                            'Count': [
+                                hist.get('1', 0), hist.get('2', 0), hist.get('3', 0), 
+                                hist.get('4', 0), hist.get('5', 0)
+                            ]
+                        }
+                        df_hist = pd.DataFrame(data_hist)
+                        
+                        # Vẽ biểu đồ cột ngang hoặc dọc
+                        fig = px.bar(
+                            df_hist, x='Star', y='Count', 
+                            text='Count',
+                            color='Star',
+                            # Màu sắc từ Đỏ (1 sao) -> Xanh (5 sao)
+                            color_discrete_map={
+                                '1': '#ff4b4b', '2': '#ff8c00', '3': '#f1c40f', 
+                                '4': '#9acd32', '5': '#4caf50'
+                            }
+                        )
+                        
+                        # Tinh chỉnh giao diện biểu đồ cho gọn
+                        fig.update_layout(
+                            height=220, 
+                            margin=dict(t=10, b=10, l=10, r=10),
+                            paper_bgcolor='rgba(0,0,0,0)',
+                            plot_bgcolor='rgba(0,0,0,0)',
+                            showlegend=False,
+                            xaxis_title=None,
+                            yaxis_title=None,
+                            yaxis={'showgrid': False, 'visible': False}, # Ẩn trục Y cho gọn
+                            font=dict(color='#fff')
+                        )
+                        # Hiển thị số lượng trên cột
+                        fig.update_traces(textposition='outside')
+                        
+                        st.plotly_chart(fig, use_container_width=True, config={'displayModeBar': False})
+                    except Exception as e:
+                        st.warning("Không thể vẽ biểu đồ phân bố.")
+                else:
+                    st.info("App này chưa có dữ liệu phân bố sao.")
+
+            st.divider()
+
+            # 3. Danh sách Review (Render danh sách đã lọc)
+            if filtered_revs:
+                for r in filtered_revs:
+                    # Xử lý an toàn cho trường hợp thiếu key
+                    user_name = r.get('userName', 'Người dùng ẩn')
+                    date_post = r.get('date', '')
+                    content = r.get('text', '')
+                    score = int(r.get('score', 0))
+                    
+                    st.markdown(f"""
+                    <div class="review-card-modern">
+                        <div style="display:flex; justify-content:space-between;">
+                            <b>{user_name}</b>
+                            <span style="color:#888; font-size:0.9em">{date_post}</span>
+                        </div>
+                        <div style="color:#ffbd45; margin: 4px 0;">{'⭐' * score}</div>
+                        <div style="font-style: italic; color: #ddd; line-height:1.4;">"{content}"</div>
+                    </div>
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Không tìm thấy đánh giá nào phù hợp với bộ lọc này.")
+
+            # 4. Nút tải thêm (Luôn hiển thị ở dưới cùng nếu còn token)
             if st.session_state.next_token:
-                if st.button("⬇️ Tải thêm review cũ hơn"):
-                    more = run_node_safe("MORE_REVIEWS", d['appId'], curr_country, "more_reviews.json", st.session_state.next_token)
-                    if more and not more.get('error'):
-                        st.session_state.current_reviews.extend(more.get('comments', []))
-                        st.session_state.next_token = more.get('nextToken')
-                        st.rerun()
-                    else: st.error("Hết review hoặc lỗi kết nối.")
+                st.markdown("---")
+                if st.button("⬇️ Tải thêm review cũ hơn từ Google Play", use_container_width=True):
+                    with st.spinner("Đang kết nối tới Google..."):
+                        more = run_node_safe(
+                            "MORE_REVIEWS", d['appId'], curr_country, 
+                            "more_reviews.json", st.session_state.next_token
+                        )
+                        
+                        if more:
+                            if more.get('error'):
+                                st.error(f"Lỗi: {more.get('error')}")
+                                if "token" in str(more.get('error')).lower():
+                                    st.session_state.next_token = None # Token hết hạn thì xóa đi
+                            else:
+                                new_comments = more.get('comments', [])
+                                if new_comments:
+                                    st.session_state.current_reviews.extend(new_comments)
+                                    st.session_state.next_token = more.get('nextToken')
+                                    st.success(f"Đã tải thêm {len(new_comments)} đánh giá!")
+                                    time.sleep(1) # Delay nhẹ để người dùng thấy thông báo
+                                    st.rerun()
+                                else:
+                                    st.warning("Không còn review nào cũ hơn.")
+                                    st.session_state.next_token = None
+                                    st.rerun()
+                        else: 
+                            st.error("Không phản hồi từ Server.")
 
         # TAB 2: MEDIA (HOÀN TOÀN MỚI)
         with tab2:
