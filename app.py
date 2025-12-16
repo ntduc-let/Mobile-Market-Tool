@@ -15,36 +15,50 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 🛠 HỆ THỐNG QUẢN LÝ NODE.JS (FIX PATH) ---
-def manage_node_environment():
-    with st.sidebar.expander("🔧 System Diagnostics", expanded=False):
-        # 1. Check Node Version
-        try:
-            node_v = subprocess.run(["node", "-v"], capture_output=True, text=True).stdout.strip()
-            st.write(f"✅ Node: `{node_v}`")
-        except: st.error("❌ Node chưa cài!")
+# --- 🛠 HỆ THỐNG TỰ ĐỘNG SỬA LỖI NODE.JS (AUTO-FIX) ---
+def ensure_node_environment():
+    """Đảm bảo môi trường Node.js và thư viện Scraper luôn sẵn sàng"""
+    
+    # 1. Xác định đường dẫn tuyệt đối
+    current_dir = os.getcwd()
+    node_modules_path = os.path.join(current_dir, "node_modules")
+    lib_path = os.path.join(node_modules_path, "google-play-scraper")
+    
+    # Biến môi trường để ép Node tìm đúng chỗ
+    os.environ["NODE_PATH"] = node_modules_path
 
-        # 2. Check Thư viện
-        lib_path = os.path.join(os.getcwd(), "node_modules", "google-play-scraper")
-        if os.path.exists(lib_path):
-            st.success("📦 Lib: Đã có")
-            # List thử file để chắc chắn không rỗng
-            files = os.listdir(lib_path)
-            st.caption(f"Files: {len(files)} items")
-        else:
-            st.warning("📦 Lib: CHƯA CÓ")
-            if st.button("🆘 Cài lại thư viện (Force Install)"):
-                with st.spinner("Đang cài đặt..."):
-                    # Dùng shell=True và cwd để đảm bảo cài đúng chỗ
-                    subprocess.run("npm install google-play-scraper", shell=True, cwd=os.getcwd())
-                    st.rerun()
+    # 2. Kiểm tra xem thư viện đã cài chưa
+    if not os.path.exists(lib_path):
+        placeholder = st.empty()
+        with placeholder.status("⚙️ Đang thiết lập môi trường Node.js...", expanded=True) as status:
+            try:
+                # Bước A: Tạo package.json nếu chưa có (để tránh lỗi npm)
+                if not os.path.exists("package.json"):
+                    status.write("📝 Tạo file cấu hình package.json...")
+                    with open("package.json", "w") as f:
+                        json.dump({"dependencies": {"google-play-scraper": "^10.0.0"}}, f)
 
-# Gọi hàm quản lý ngay đầu
-manage_node_environment()
+                # Bước B: Cài đặt thư viện trực tiếp
+                status.write("⬇️ Đang tải thư viện 'google-play-scraper'...")
+                # Dùng shell=True và cwd để đảm bảo lệnh chạy đúng thư mục gốc
+                subprocess.run("npm install google-play-scraper", shell=True, check=True, cwd=current_dir)
+                
+                status.update(label="✅ Cài đặt thành công! Đang tải lại...", state="complete")
+                time.sleep(1)
+                st.rerun() # Tự động reload để áp dụng
+                
+            except Exception as e:
+                status.update(label="❌ Lỗi cài đặt", state="error")
+                st.error(f"Chi tiết lỗi: {str(e)}")
+                st.stop()
 
-# --- BACKEND FUNCTIONS (ĐÃ SỬA: THÊM NODE_PATH) ---
+# Gọi hàm này ngay đầu chương trình
+ensure_node_environment()
+
+# --- BACKEND FUNCTIONS (ĐÃ UPDATE NODE_PATH) ---
 def run_node_safe(mode, target, country, output_file, token=None):
     file_path = f"data/{output_file}"
+    # Xóa file cũ để tránh đọc lại dữ liệu rác
     if os.path.exists(file_path):
         try: os.remove(file_path)
         except: pass
@@ -53,30 +67,29 @@ def run_node_safe(mode, target, country, output_file, token=None):
         args = ["node", NODE_SCRIPT, mode, target, country]
         if token: args.append(token)
         
-        # --- FIX QUAN TRỌNG: CHỈ ĐỊNH ĐƯỜNG DẪN MODULE ---
+        # --- FIX QUAN TRỌNG: CẬP NHẬT BIẾN MÔI TRƯỜNG ---
+        # Lấy môi trường hiện tại và thêm NODE_PATH
         my_env = os.environ.copy()
-        current_dir = os.getcwd()
-        my_env["NODE_PATH"] = os.path.join(current_dir, "node_modules")
+        my_env["NODE_PATH"] = os.path.join(os.getcwd(), "node_modules")
         
-        # Chạy lệnh với môi trường đã set path
+        # Chạy lệnh Node với môi trường đã sửa
         result = subprocess.run(
             args, 
             capture_output=True, 
             text=True, 
             check=True,
-            cwd=current_dir, # Chạy tại thư mục gốc
+            cwd=os.getcwd(), # Chạy tại thư mục gốc
             env=my_env       # Truyền biến môi trường vào
         )
-        
-        time.sleep(0.5)
+        time.sleep(0.5) # Chờ ổ cứng ghi file
         
     except subprocess.CalledProcessError as e:
-        # Log lỗi ra console của Streamlit Cloud để debug nếu cần
-        print(f"Node Error: {e.stderr}")
+        print(f"Node Error Log: {e.stderr}") # Ghi log lỗi ra console server
         return None
     except Exception as e:
         return None
 
+    # Đọc kết quả
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
@@ -254,12 +267,7 @@ if 'dev_apps' not in st.session_state: st.session_state.dev_apps = []
 # --- CSS ---
 st.markdown("""
 <style>
-    .app-card-modern {
-        background: linear-gradient(145deg, #1e2028, #23252e);
-        border-radius: 16px; padding: 16px; margin-bottom: 16px;
-        border: 1px solid #2c303a; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        transition: all 0.2s ease-in-out;
-    }
+    .app-card-modern { background: linear-gradient(145deg, #1e2028, #23252e); border-radius: 16px; padding: 16px; margin-bottom: 16px; border: 1px solid #2c303a; box-shadow: 0 4px 12px rgba(0,0,0,0.3); transition: all 0.2s ease-in-out; }
     .app-card-modern:hover { transform: translateY(-3px); border-color: #64b5f6; box-shadow: 0 6px 16px rgba(100, 181, 246, 0.2); }
     .card-content-flex { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 12px; }
     .rank-number { font-size: 1.4em; font-weight: 900; color: #64b5f6; min-width: 30px; }
@@ -363,11 +371,12 @@ target_country = COUNTRIES_LIST[sel_country_lbl]
 target_cat = CATEGORIES_LIST[sel_cat_lbl]
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
     with st.status("Đang quét..."):
-        # Fix cho nút Quét Chart: dùng hàm run_node_safe luôn cho đồng bộ hoặc gọi subprocess với env
         try:
+            # FIX: Gọi subprocess với env đã set path
             my_env = os.environ.copy()
             my_env["NODE_PATH"] = os.path.join(os.getcwd(), "node_modules")
             subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True, env=my_env, cwd=os.getcwd())
+            
             if save_data_to_db(target_cat, target_country):
                 st.session_state.view_mode = 'list'
                 st.rerun()
