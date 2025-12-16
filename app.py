@@ -18,27 +18,34 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
+# --- [DEPLOY FIX] HÀM KIỂM TRA MÔI TRƯỜNG ---
 def init_environment():
-    # 1. Tạo thư mục data
+    """Kiểm tra và cài đặt môi trường cần thiết cho Streamlit Cloud"""
+    
+    # 1. Tạo thư mục data nếu chưa có
     if not os.path.exists('data'):
         os.makedirs('data')
 
     # 2. HARD RESET: Xóa sạch thư viện cũ để tránh xung đột version
     # File 'install_flag' dùng để đánh dấu đã reset xong chưa
-    install_flag = "install_done_v9.lock"
+    install_flag = "install_done_v9_1.lock" # Đổi tên lock file để chắc chắn nó chạy lại
 
     if not os.path.exists(install_flag):
-        st.toast("🧹 Đang dọn dẹp thư viện cũ lỗi thời...", icon="php")
+        # SỬA LỖI Ở ĐÂY: icon="🧹" thay vì icon="php"
+        st.toast("Đang dọn dẹp thư viện cũ lỗi thời...", icon="🧹")
         
-        # Xóa node_modules
+        # Xóa node_modules cũ
         if os.path.exists('node_modules'):
-            shutil.rmtree('node_modules')
+            try:
+                shutil.rmtree('node_modules')
+            except:
+                pass # Bỏ qua lỗi nếu không xóa được
             
         # QUAN TRỌNG: Xóa package-lock.json để npm không cài lại bản lỗi cũ
         if os.path.exists('package-lock.json'):
             os.remove('package-lock.json')
 
-        st.toast("⚙️ Đang cài đặt thư viện Node.js (v9.1.0)...", icon="⏳")
+        st.toast("Đang cài đặt thư viện Node.js (v9.1.0)...", icon="⏳")
         try:
             # Chạy npm install
             subprocess.run(['npm', 'install'], check=True)
@@ -47,7 +54,7 @@ def init_environment():
             with open(install_flag, 'w') as f:
                 f.write("ok")
                 
-            st.toast("✅ Cài đặt thành công! Đang khởi động lại...", icon="🎉")
+            st.toast("Cài đặt thành công! Đang khởi động lại...", icon="✅")
             time.sleep(1)
             st.rerun()
         except subprocess.CalledProcessError as e:
