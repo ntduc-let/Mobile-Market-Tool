@@ -23,33 +23,38 @@ def init_environment():
     if not os.path.exists('data'):
         os.makedirs('data')
 
-    # 2. KIỂM TRA & CÀI ĐẶT NODE.JS (QUAN TRỌNG)
-    # File lock này để đánh dấu đã cài version đúng hay chưa
-    lock_file = "node_install_v2.lock" 
+    # 2. HARD RESET: Xóa sạch thư viện cũ để tránh xung đột version
+    # File 'install_flag' dùng để đánh dấu đã reset xong chưa
+    install_flag = "install_done_v9.lock"
 
-    if not os.path.exists(lock_file):
-        st.toast("♻️ Phát hiện cấu hình mới. Đang cài đặt lại Node.js...", icon="🔄")
+    if not os.path.exists(install_flag):
+        st.toast("🧹 Đang dọn dẹp thư viện cũ lỗi thời...", icon="php")
         
-        # Xóa folder cũ nếu có để tránh xung đột
+        # Xóa node_modules
         if os.path.exists('node_modules'):
             shutil.rmtree('node_modules')
             
+        # QUAN TRỌNG: Xóa package-lock.json để npm không cài lại bản lỗi cũ
+        if os.path.exists('package-lock.json'):
+            os.remove('package-lock.json')
+
+        st.toast("⚙️ Đang cài đặt thư viện Node.js (v9.1.0)...", icon="⏳")
         try:
             # Chạy npm install
             subprocess.run(['npm', 'install'], check=True)
             
-            # Tạo file lock để lần sau không phải cài lại
-            with open(lock_file, 'w') as f:
-                f.write("installed")
+            # Đánh dấu đã cài xong
+            with open(install_flag, 'w') as f:
+                f.write("ok")
                 
-            st.toast("✅ Cài đặt thư viện Node.js (v9.1.0) thành công!", icon="🎉")
+            st.toast("✅ Cài đặt thành công! Đang khởi động lại...", icon="🎉")
             time.sleep(1)
-            st.rerun() # Reload lại app ngay lập tức
-            
+            st.rerun()
         except subprocess.CalledProcessError as e:
-            st.error(f"❌ Lỗi npm install: {e}")
+            st.error(f"❌ Lỗi khi cài đặt: {e}")
             st.stop()
 
+# Gọi hàm khởi tạo
 init_environment()
 
 # --- DANH SÁCH THỂ LOẠI (FULL CATEGORIES) ---

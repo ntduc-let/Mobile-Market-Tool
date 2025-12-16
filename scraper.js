@@ -1,5 +1,5 @@
 const fs = require('fs');
-// Import trực tiếp kiểu cũ (Chuẩn cho v9.1.0)
+// Bản 9.1.0 dùng require trực tiếp, không cần .default
 const gplay = require('google-play-scraper');
 
 // --- CONFIG ---
