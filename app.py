@@ -734,14 +734,15 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                     
                     # QUAN TRỌNG: F-string được viết sát lề trái để tránh khoảng trắng thừa
                     html_content += f"""<div style="display:inline-block; margin-right:10px;">
-<input type="checkbox" id="{unique_id}" class="lightbox-toggle">
-<label for="{unique_id}" class="thumb-label">
-<img src="{url}" class="thumb-img" loading="lazy">
-</label>
-<label for="{unique_id}" class="lightbox-overlay">
-<img src="{url}" class="full-img">
-</label>
-</div>"""
+                                        <input type="checkbox" id="{unique_id}" class="lightbox-toggle">
+                                        <label for="{unique_id}" class="thumb-label">
+                                        <img src="{url}" class="thumb-img" loading="lazy">
+                                        </label>
+                                        <label for="{unique_id}" class="lightbox-overlay">
+                                        <img src="{url}" class="full-img">
+                                        </label>
+                                        </div>
+                                    """
                 
                 html_content += '</div>'
                 
