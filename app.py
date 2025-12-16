@@ -392,6 +392,24 @@ def load_data_today(cat, country):
         conn.close(); return df
     except: conn.close(); return pd.DataFrame()
 
+# Hàm chạy Node linh hoạt hỗ trợ nhiều tham số (args)
+def run_node_safe_custom(mode, target, country, output_file, *extra_args):
+    file_path = f"data/{output_file}"
+    if os.path.exists(file_path): 
+        try: os.remove(file_path)
+        except: pass
+    try:
+        # Xây dựng câu lệnh: node scraper.js MODE TARGET COUNTRY ARG1 ARG2 ...
+        cmd = ["node", NODE_SCRIPT, mode, target, country] + list(extra_args)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=90)
+        
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
+    except Exception as e: 
+        print(f"Node Error: {e}")
+        return []
+    return []
+
 # --- 7. UI COMPONENTS ---
 def render_mini_card(app, country, rank_idx, key_prefix):
     icon_url = app.get('icon', '') or 'https://via.placeholder.com/72?text=App'
@@ -424,25 +442,46 @@ def render_mini_card(app, country, rank_idx, key_prefix):
 st.sidebar.title("🚀 Super Tool")
 st.sidebar.subheader("🔍 Tìm kiếm")
 search_term = st.sidebar.text_input("Nhập Từ khóa hoặc App ID:", placeholder="VD: com.facebook.katana")
-search_country_label = st.sidebar.selectbox("Quốc gia tìm kiếm", list(COUNTRIES_LIST.keys()), index=0)
 
-if st.sidebar.button("🔎 Tìm ngay"):
+# [UPDATE] Thêm tùy chọn nâng cao cho tìm kiếm
+c_s1, c_s2 = st.sidebar.columns(2)
+with c_s1:
+    search_country_label = st.selectbox("Quốc gia", list(COUNTRIES_LIST.keys()), index=0)
+with c_s2:
+    search_price_label = st.selectbox("Giá", ["Tất cả", "Miễn phí", "Trả phí"])
+
+# [UPDATE] Thanh trượt số lượng kết quả (Max 250 theo Google API)
+search_limit = st.sidebar.slider("Số lượng kết quả", 10, 250, 30, step=10)
+
+# Map giá trị cho API
+price_map = {"Tất cả": "all", "Miễn phí": "free", "Trả phí": "paid"}
+
+if st.sidebar.button("🔎 Tìm ngay", type="primary"):
     if search_term:
         s_country = COUNTRIES_LIST[search_country_label]
-        # XỬ LÝ NẾU LÀ APP ID
+        s_price = price_map[search_price_label]
+        
+        # 1. NẾU LÀ APP ID (Có dấu chấm và không có khoảng trắng)
         if "." in search_term and " " not in search_term:
             st.session_state.selected_app = {'app_id': search_term.strip(), 'title': search_term, 'country_override': s_country}
             st.session_state.view_mode = 'detail'
             st.rerun()
-        # XỬ LÝ NẾU LÀ TỪ KHÓA
+            
+        # 2. NẾU LÀ TỪ KHÓA (GỌI SEARCH MỚI)
         else:
-            with st.spinner("Đang tìm kiếm..."):
-                res = run_node_safe("SEARCH", search_term, s_country, "search_results.json")
-                if res:
+            with st.status(f"Đang tìm '{search_term}'..."):
+                # Gọi node với 2 tham số mới: Limit và Price
+                # Arg cấu trúc: [mode, target, country, limit, price]
+                res = run_node_safe_custom("SEARCH", search_term, s_country, "search_results.json", str(search_limit), s_price)
+                
+                if res is not None: # Kiểm tra None thay vì check list rỗng để tránh lỗi logic
                     st.session_state.search_results = res
                     st.session_state.view_mode = 'search_results'
                     st.rerun()
-                else: st.error("Lỗi tìm kiếm (Backend Error).")
+                else: 
+                    st.error("Lỗi tìm kiếm (Backend Error).")
+    else:
+        st.warning("Vui lòng nhập từ khóa.")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Top Charts")
@@ -531,13 +570,53 @@ if st.session_state.view_mode == 'list':
 # B. SEARCH RESULTS
 elif st.session_state.view_mode == 'search_results':
     st.button("⬅️ Quay lại", on_click=lambda: st.session_state.update(view_mode='list'))
-    st.title("🔎 Kết quả tìm kiếm")
+    
     results = st.session_state.search_results
+    st.title(f"🔎 Kết quả: {len(results)} ứng dụng")
+    
     if results:
-        cols = st.columns(3)
-        for i, app in enumerate(results):
-            with cols[i % 3]: render_mini_card(app, COUNTRIES_LIST[search_country_label], i, "sr")
-    else: st.warning("Không tìm thấy kết quả nào.")
+        # Chọn chế độ xem
+        view_type = st.radio("Chế độ hiển thị:", ["📱 Dạng Thẻ (Grid)", "📄 Dạng Bảng (Table)"], horizontal=True, key="search_view_radio")
+        st.divider()
+
+        # Lấy quốc gia từ lần tìm kiếm trước (hoặc mặc định)
+        # Lưu ý: search_country_label là biến sidebar, có thể đã bị đổi. 
+        # Tốt nhất nên lưu country vào session_state khi bấm nút tìm, nhưng ở đây ta tạm dùng biến toàn cục COUNTRIES_LIST
+        current_search_country = COUNTRIES_LIST.get(search_country_label, 'vn') 
+
+        if view_type == "📱 Dạng Thẻ (Grid)":
+            cols = st.columns(3)
+            for i, app in enumerate(results):
+                with cols[i % 3]: 
+                    render_mini_card(app, current_search_country, i, "sr")
+        
+        else: # Dạng Bảng
+            # Chuyển đổi dữ liệu sang DataFrame
+            df_search = pd.DataFrame(results)
+            
+            # Chọn và đổi tên các cột cần thiết
+            if not df_search.empty:
+                # Xử lý dữ liệu an toàn (tránh lỗi nếu thiếu trường)
+                df_display = pd.DataFrame()
+                df_display['Icon'] = df_search.get('icon', '')
+                df_display['Tên App'] = df_search.get('title', 'No Title')
+                df_display['Nhà phát triển'] = df_search.get('developer', 'Unknown')
+                df_display['Điểm'] = df_search.get('score', 0)
+                df_display['Giá'] = df_search.get('priceText', 'Free')
+                df_display['ID'] = df_search.get('appId', '')
+
+                st.dataframe(
+                    df_display,
+                    use_container_width=True,
+                    column_config={
+                        "Icon": st.column_config.ImageColumn("Icon", width="small"),
+                        "Điểm": st.column_config.ProgressColumn("Rating", min_value=0, max_value=5, format="%.1f"),
+                        "ID": st.column_config.TextColumn("Package ID", width="medium"),
+                    },
+                    height=800 
+                )
+    else: 
+        st.warning("Không tìm thấy kết quả nào phù hợp. Hãy thử từ khóa khác.")
 
 # C. DETAIL VIEW
 elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
