@@ -669,22 +669,41 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             else:
                 st.info("⚠️ Không tìm thấy đối thủ hoặc ứng dụng tương tự nào.")
 
-        # --- TAB 5: CÙNG DEV (ĐÃ FIX LỖI NAME ERROR) ---
+        # --- TAB 5: CÙNG DEV (ĐÃ NÂNG CẤP: LỌC CHÍNH XÁC) ---
         with tab5:
             current_id = d.get('appId')
+            # Lấy tên Dev hiện tại, chuyển về chữ thường để so sánh
+            current_dev_name = d.get('developer', '').lower()
             country_code = st.session_state.selected_app.get('country_override', 'vn')
-
-            # Lọc bỏ chính App đang xem
-            devs = [dv for dv in st.session_state.dev_apps if dv.get('appId') != current_id]
             
-            if devs:
+            # Logic lọc thông minh:
+            # 1. Bỏ app trùng ID (chính nó).
+            # 2. Bỏ app mà tên Dev không liên quan (chống Google trả về kết quả tìm kiếm sai).
+            clean_devs = []
+            if st.session_state.dev_apps:
+                for dv in st.session_state.dev_apps:
+                    # Bỏ qua chính nó
+                    if dv.get('appId') == current_id: continue
+                    
+                    # Kiểm tra tên Developer:
+                    # Nếu tên Dev của app trong list có chứa tên Dev gốc (hoặc ngược lại) thì mới lấy
+                    dv_name = dv.get('developer', '').lower()
+                    
+                    # So sánh tương đối (Ví dụ: "Google LLC" khớp "Google Inc")
+                    # Chỉ cần một trong hai cái chứa cái kia là OK
+                    if current_dev_name in dv_name or dv_name in current_dev_name:
+                        clean_devs.append(dv)
+
+            if clean_devs:
+                st.info(f"Tìm thấy {len(clean_devs)} ứng dụng khác của {d.get('developer')}")
                 cols = st.columns(3)
-                for i, dv in enumerate(devs[:9]):
+                for i, dv in enumerate(clean_devs[:9]): # Chỉ hiện 9 app đầu tiên
                     with cols[i % 3]:
-                        # Thay 'sapp' bằng 'country_code'
                         render_mini_card(dv, country_code, i, "dev")
             else:
-                st.info("Nhà phát triển này chỉ có 1 ứng dụng này trên Store.")
+                st.warning(f"Không tìm thấy ứng dụng nào khác chuẩn xác của '{d.get('developer')}'.")
+                # Debug: Hiển thị lý do nếu cần thiết
+                # st.caption("Google có thể đã trả về kết quả tìm kiếm rộng thay vì danh sách chính xác.")
 
         # TAB 6: INFO (Code cũ, đưa vào tab cuối)
         with tab6:
