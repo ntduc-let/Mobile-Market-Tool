@@ -19,10 +19,6 @@ def ensure_node_modules():
                 # THAY ĐỔI Ở ĐÂY: Cài đích danh thư viện, không dùng 'npm install' chung chung
                 subprocess.run(['npm', 'install', 'google-play-scraper'], check=True, shell=True)
                 
-                # Mẹo: Xóa file package-lock.json nếu nó được tạo ra để tránh lỗi lần sau
-                if os.path.exists('package-lock.json'):
-                    os.remove('package-lock.json')
-                    
                 st.success('Cài đặt xong!')
             except subprocess.CalledProcessError as e:
                 st.error(f"Lỗi khi cài npm: {e}")
