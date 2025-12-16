@@ -7,6 +7,7 @@ import json
 import datetime
 import plotly.graph_objects as go
 import plotly.express as px
+import re
 import time
 import shutil
 
@@ -15,28 +16,45 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 2. [AUTO-INSTALL] HỆ THỐNG TỰ CÀI ĐẶT ---
+# --- 2. [QUAN TRỌNG] TỰ ĐỘNG CÀI ĐẶT NODE.JS ---
 def init_environment():
-    if not os.path.exists('data'): os.makedirs('data')
-    
-    # File lock đánh dấu phiên bản "Full Features"
-    install_flag = "install_v10_ultimate.lock" 
+    # Tạo thư mục data
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
+    # File lock đánh dấu phiên bản v10
+    install_flag = "install_v10_final.lock"
 
     if not os.path.exists(install_flag):
-        st.toast("♻️ Đang nâng cấp hệ thống...", icon="🚀")
-        if os.path.exists('node_modules'): shutil.rmtree('node_modules', ignore_errors=True)
-        if os.path.exists('package-lock.json'): os.remove('package-lock.json')
+        st.toast("♻️ Đang khởi tạo hệ thống...", icon="🚀")
+        
+        # Xóa bản cũ để tránh xung đột
+        if os.path.exists('node_modules'):
+            try: shutil.rmtree('node_modules', ignore_errors=True)
+            except: pass
+        if os.path.exists('package-lock.json'):
+            try: os.remove('package-lock.json')
+            except: pass
+
         try:
+            # Cài đặt thư viện npm
             subprocess.run(['npm', 'install'], check=True, capture_output=True)
-            with open(install_flag, 'w') as f: f.write("ok")
-            st.toast("✅ Nâng cấp xong! Reloading...", icon="🎉")
+            
+            # Đánh dấu thành công
+            with open(install_flag, 'w') as f:
+                f.write("ok")
+            
+            st.toast("✅ Cài đặt xong! App đang khởi động...", icon="🎉")
             time.sleep(1)
             st.rerun()
-        except: st.error("Lỗi cài đặt Node.js."); st.stop()
+        except subprocess.CalledProcessError:
+            st.error("❌ Lỗi cài đặt Node.js. Vui lòng kiểm tra file package.json")
+            st.stop()
 
+# Chạy khởi tạo ngay đầu file
 init_environment()
 
-# --- 3. DỮ LIỆU CẤU HÌNH ---
+# --- 3. DANH SÁCH HẰNG SỐ (FULL) ---
 CATEGORIES_LIST = {
     "🎮 Game: Hành động (Action)": "GAME_ACTION",
     "🎮 Game: Phiêu lưu (Adventure)": "GAME_ADVENTURE",
@@ -144,366 +162,465 @@ COUNTRIES_LIST = {
     "🇳🇬 Nigeria": "ng"
 }
 
-# --- 4. QUẢN LÝ TRẠNG THÁI (SESSION) ---
+# --- 4. STATE MANAGEMENT ---
 if 'view_mode' not in st.session_state: st.session_state.view_mode = 'list'
 if 'selected_app' not in st.session_state: st.session_state.selected_app = None
 if 'search_results' not in st.session_state: st.session_state.search_results = []
 if 'detail_id' not in st.session_state: st.session_state.detail_id = None
+if 'detail_country' not in st.session_state: st.session_state.detail_country = None
 if 'detail_data' not in st.session_state: st.session_state.detail_data = None
 if 'current_reviews' not in st.session_state: st.session_state.current_reviews = []
 if 'next_token' not in st.session_state: st.session_state.next_token = None
 if 'similar_apps' not in st.session_state: st.session_state.similar_apps = []
 if 'dev_apps' not in st.session_state: st.session_state.dev_apps = []
 
-# --- 5. CSS GIAO DIỆN (FULL) ---
+# --- 5. CSS (GIAO DIỆN) ---
 st.markdown("""
 <style>
-    /* Card Xịn */
+    /* --- Giao diện thẻ Mini (List View) --- */
     .app-card-modern {
         background: linear-gradient(145deg, #1e2028, #23252e);
         border-radius: 16px; padding: 16px; margin-bottom: 16px;
         border: 1px solid #2c303a; box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-        transition: transform 0.2s;
+        transition: all 0.2s ease-in-out;
     }
-    .app-card-modern:hover { transform: translateY(-3px); border-color: #64b5f6; }
-    .card-content-flex { display: flex; align-items: flex-start; gap: 15px; }
+    .app-card-modern:hover { transform: translateY(-3px); border-color: #64b5f6; box-shadow: 0 6px 16px rgba(100, 181, 246, 0.2); }
+    .card-content-flex { display: flex; align-items: flex-start; gap: 15px; margin-bottom: 12px; }
     .rank-number { font-size: 1.4em; font-weight: 900; color: #64b5f6; min-width: 30px; }
-    .app-icon-img { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; border: 1px solid #333; }
+    .app-icon-img { width: 72px; height: 72px; border-radius: 14px; object-fit: cover; border: 1px solid #333; box-shadow: 0 2px 5px rgba(0,0,0,0.2); }
     .app-info-box { flex-grow: 1; overflow: hidden; }
-    .app-title-modern { font-size: 1.15em; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
-    .app-publisher-modern { font-size: 0.9em; color: #b0b3b8; }
-    .metric-score { color: #ffbd45; font-weight: 700; font-size: 0.95em; display: flex; align-items: center; margin-top: 5px; }
+    .app-title-modern { font-size: 1.15em; font-weight: 700; color: #fff; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .app-publisher-modern { font-size: 0.9em; color: #b0b3b8; margin-bottom: 8px; }
+    .metric-score { color: #ffbd45; font-weight: 700; font-size: 0.95em; display: flex; align-items: center; }
 
-    /* Review Card */
-    .review-card-modern { background-color: #2a2d3a; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #ffbd45; }
-    .review-header { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; font-size: 0.9em; }
-    .review-user { font-weight: 700; color: #fff; }
-    
-    /* Metrics Grid */
+    /* --- Giao diện Detail --- */
+    .hero-header {
+        display: flex; gap: 25px; padding: 25px;
+        background: linear-gradient(135deg, #2a2d3a 0%, #1e2028 100%);
+        border-radius: 20px; border: 1px solid #3a3f4b;
+        box-shadow: 0 8px 20px rgba(0,0,0,0.4); margin-bottom: 25px;
+        align-items: center;
+    }
+    .hero-icon-big { width: 120px; height: 120px; border-radius: 20px; border: 2px solid #444; box-shadow: 0 4px 10px rgba(0,0,0,0.3); }
+    .hero-title-text { font-size: 2.2em; font-weight: 800; color: #fff; margin: 0; line-height: 1.2; }
+    .hero-dev-text { font-size: 1.1em; color: #64b5f6; margin-bottom: 10px; }
+    .hero-id-text { font-family: monospace; color: #888; font-size: 0.9em; background: #15171e; padding: 4px 8px; border-radius: 6px;}
+
     .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-    .metric-card-custom { background: #23252e; padding: 20px 15px; border-radius: 16px; text-align: center; border: 1px solid #333; }
-    .metric-val { font-size: 1.6em; font-weight: 800; color: #fff; display: block; }
-    .metric-lbl { font-size: 0.85em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
+    .metric-card-custom {
+        background: #23252e; padding: 20px 15px; border-radius: 16px; text-align: center;
+        border: 1px solid #333; transition: transform 0.2s;
+    }
+    .metric-card-custom:hover { transform: translateY(-2px); border-color: #555; }
+    .metric-icon { font-size: 1.8em; margin-bottom: 8px; display: block; }
+    .metric-value { font-size: 1.6em; font-weight: 800; color: #fff; display: block; }
+    .metric-label { font-size: 0.9em; color: #aaa; text-transform: uppercase; letter-spacing: 1px; }
     
-    /* Tags */
-    .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: bold; margin-right: 6px; display: inline-block; border: 1px solid rgba(255,255,255,0.1); }
-    .badge-ad { background: rgba(230, 81, 0, 0.2); color: #ff9800; }
-    .badge-iap { background: rgba(27, 94, 32, 0.2); color: #4caf50; }
-    .badge-free { background: rgba(13, 71, 161, 0.2); color: #64b5f6; }
+    .review-card-modern {
+        background-color: #2a2d3a; padding: 15px; border-radius: 12px;
+        margin-bottom: 12px; border-left: 4px solid #ffbd45;
+    }
+    .review-header { display: flex; justify-content: space-between; margin-bottom: 8px; color: #ccc; font-size: 0.9em;}
+    .review-user { font-weight: 700; color: #fff; }
+    .review-text { color: #e0e0e0; line-height: 1.5; font-style: italic;}
+
+    .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: bold; margin-right: 6px; border: 1px solid rgba(255,255,255,0.1); display: inline-block;}
+    .badge-ad { background-color: rgba(230, 81, 0, 0.2); color: #ff9800; }
+    .badge-iap { background-color: rgba(27, 94, 32, 0.2); color: #4caf50; }
+    .badge-free { background-color: rgba(13, 71, 161, 0.2); color: #64b5f6; }
+    .perm-tag { background-color: #333; color: #ccc; padding: 4px 10px; border-radius: 20px; font-size: 0.85em; margin: 3px; display: inline-block; border: 1px solid #444;}
     
-    div.stButton > button { width: 100%; border-radius: 10px; font-weight: 600; }
+    div.stButton > button { width: 100%; border-radius: 12px; font-weight: 600; }
+    h4 { color: #64b5f6 !important; margin-top: 20px !important; }
+    hr { border-color: #444; margin: 30px 0; }
 </style>
 """, unsafe_allow_html=True)
 
 # --- 6. BACKEND FUNCTIONS ---
 def run_node_safe(mode, target, country, output_file, token=None):
     file_path = f"data/{output_file}"
-    if os.path.exists(file_path): 
-        try: os.remove(file_path) 
+    if os.path.exists(file_path):
+        try: os.remove(file_path)
         except: pass
-    
     try:
         args = ["node", NODE_SCRIPT, mode, target, country]
         if token: args.append(token)
         subprocess.run(args, capture_output=True, text=True, check=True, timeout=90)
+    except subprocess.CalledProcessError as e:
+        return None
     except Exception: return None
-    
+
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
         except: return None
     return None
 
-def save_data_to_db(cat, country):
+def save_data_to_db(category_id, country_code):
     if not os.path.exists("data/raw_data.json"): return False
     try:
         with open("data/raw_data.json", 'r', encoding='utf-8') as f: data = json.load(f)
     except: return False
-    if not data: return False
     
+    if not data: return False
+
     conn = sqlite3.connect(DB_PATH)
-    today = datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')
-    conn.execute("DELETE FROM app_history WHERE category=? AND country=? AND scraped_at>=?", (cat, country, today))
-    conn.execute('''CREATE TABLE IF NOT EXISTS app_history (
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS app_history (
             scraped_at TIMESTAMP, category TEXT, country TEXT, collection_type TEXT,
             rank INT, app_id TEXT, title TEXT, developer TEXT, score REAL,
             installs TEXT, price REAL, currency TEXT, icon TEXT, reviews INT)''')
+    
+    today = datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')
+    cursor.execute("DELETE FROM app_history WHERE category=? AND country=? AND scraped_at>=?", (category_id, country_code, today))
+    
     clean = []
     ts = datetime.datetime.now()
     for i in data:
-        clean.append((ts, i.get('category'), i.get('country'), i.get('collection_type'), i.get('rank'), i.get('appId') or i.get('app_id'), i.get('title'), i.get('developer'), i.get('score', 0), i.get('installs', 'N/A'), i.get('price', 0), 'VND', i.get('icon', ''), 0))
-    conn.executemany('INSERT INTO app_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', clean)
-    conn.commit(); conn.close(); return True
+        clean.append((
+            ts, i.get('category'), i.get('country'), i.get('collection_type'), i.get('rank'),
+            i.get('appId') or i.get('app_id'), # Fallback ID
+            i.get('title'), i.get('developer'), i.get('score', 0), 
+            i.get('installs', 'N/A'), i.get('price', 0), 'VND', i.get('icon', ''), 0
+        ))
+    cursor.executemany('INSERT INTO app_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', clean)
+    conn.commit(); conn.close()
+    return True
 
 def load_data_today(cat, country):
     conn = sqlite3.connect(DB_PATH)
     try:
         today = datetime.datetime.now().strftime('%Y-%m-%d')
-        return pd.read_sql(f"SELECT * FROM app_history WHERE category='{cat}' AND country='{country}' AND strftime('%Y-%m-%d', scraped_at)='{today}'", conn)
-    except: return pd.DataFrame()
+        df = pd.read_sql(f"SELECT * FROM app_history WHERE category='{cat}' AND country='{country}' AND strftime('%Y-%m-%d', scraped_at)='{today}'", conn)
+        conn.close(); return df
+    except: conn.close(); return pd.DataFrame()
 
-# --- 7. UI RENDERER ---
+# --- 7. UI COMPONENTS ---
 def render_mini_card(app, country, rank_idx, key_prefix):
-    icon = app.get('icon') or 'https://via.placeholder.com/72'
-    title = app.get('title', 'Unknown')
-    dev = app.get('developer', 'Unknown')
+    icon_url = app.get('icon', '') or 'https://via.placeholder.com/72?text=App'
+    title = app.get('title', 'Unknown Title')
+    publisher = app.get('developer', 'Unknown Dev')
     score = app.get('score', 0)
-    app_id = app.get('appId') or app.get('app_id') or f"u_{rank_idx}"
     rank = rank_idx + 1
+    app_id_safe = app.get('app_id') or app.get('appId') or f"unknown_{rank}"
+    unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
     
     st.markdown(f"""
     <div class="app-card-modern">
         <div class="card-content-flex">
             <div class="rank-number">#{rank}</div>
-            <img src="{icon}" class="app-icon-img">
+            <img src="{icon_url}" class="app-icon-img">
             <div class="app-info-box">
                 <div class="app-title-modern" title="{title}">{title}</div>
-                <div class="app-publisher-modern">{dev}</div>
+                <div class="app-publisher-modern">{publisher}</div>
                 <div class="metric-score">⭐ {score:.1f}</div>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    
-    if st.button("🔍 Chi tiết", key=f"btn_{key_prefix}_{app_id}"):
-        st.session_state.selected_app = {'app_id': app_id, 'title': title, 'country_override': country}
+    if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
+        st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
         st.session_state.view_mode = 'detail'
         st.rerun()
 
 # --- 8. SIDEBAR ---
 st.sidebar.title("🚀 Super Tool")
-
-# Khu vực tìm kiếm & Gợi ý
 st.sidebar.subheader("🔍 Tìm kiếm")
-search_term = st.sidebar.text_input("Từ khóa / App ID:")
-search_country = COUNTRIES_LIST[st.sidebar.selectbox("Quốc gia", list(COUNTRIES_LIST.keys()))]
+search_term = st.sidebar.text_input("Nhập Từ khóa hoặc App ID:", placeholder="VD: com.facebook.katana")
+search_country_label = st.sidebar.selectbox("Quốc gia tìm kiếm", list(COUNTRIES_LIST.keys()), index=0)
 
-c1, c2 = st.sidebar.columns(2)
-if c1.button("🔎 Tìm"):
+if st.sidebar.button("🔎 Tìm ngay"):
     if search_term:
-        with st.spinner("Đang tìm..."):
-            res = run_node_safe("SEARCH", search_term, search_country, "search_results.json")
-            if res:
-                st.session_state.search_results = res
-                st.session_state.view_mode = 'search_results'
-                st.rerun()
-            else: st.error("Không tìm thấy.")
-
-if c2.button("💡 Gợi ý"):
-    if search_term:
-        sugs = run_node_safe("SUGGEST", search_term, search_country, "suggest_results.json")
-        if sugs: st.sidebar.success(f"Gợi ý: {', '.join(sugs)}")
-        else: st.sidebar.warning("Không có gợi ý.")
+        s_country = COUNTRIES_LIST[search_country_label]
+        # XỬ LÝ NẾU LÀ APP ID
+        if "." in search_term and " " not in search_term:
+            st.session_state.selected_app = {'app_id': search_term.strip(), 'title': search_term, 'country_override': s_country}
+            st.session_state.view_mode = 'detail'
+            st.rerun()
+        # XỬ LÝ NẾU LÀ TỪ KHÓA
+        else:
+            with st.spinner("Đang tìm kiếm..."):
+                res = run_node_safe("SEARCH", search_term, s_country, "search_results.json")
+                if res:
+                    st.session_state.search_results = res
+                    st.session_state.view_mode = 'search_results'
+                    st.rerun()
+                else: st.error("Lỗi tìm kiếm (Backend Error).")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Top Charts")
-sel_cat = CATEGORIES_LIST[st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))]
+sel_country_lbl = st.sidebar.selectbox("Quốc Gia", list(COUNTRIES_LIST.keys()))
+sel_cat_lbl = st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))
+target_country = COUNTRIES_LIST[sel_country_lbl]
+target_cat = CATEGORIES_LIST[sel_cat_lbl]
 
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
-    with st.status("Đang xử lý...", expanded=True):
-        st.write("📡 Đang quét dữ liệu Google Play...")
-        subprocess.run(["node", NODE_SCRIPT, "LIST", sel_cat, search_country], check=True)
-        st.write("💾 Đang lưu vào Database...")
-        if save_data_to_db(sel_cat, search_country):
-            st.session_state.view_mode = 'list'
-            st.rerun()
+    with st.status("Đang quét..."):
+        try:
+            subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True, timeout=120)
+            if save_data_to_db(target_cat, target_country):
+                st.session_state.view_mode = 'list'
+                st.rerun()
+            else: st.error("Không lưu được DB.")
+        except subprocess.TimeoutExpired:
+             st.error("Timeout! Quá trình quét mất quá nhiều thời gian.")
+        except Exception as e: 
+             st.error(f"Lỗi: {e}")
 
-with st.sidebar.expander("📂 Tiện ích khác"):
-    if st.button("Check Danh mục"):
-        cats = run_node_safe("CATEGORIES", "", "", "all_categories.json")
-        st.write(cats)
-
-# --- 9. MAIN CONTENT ---
+# --- 9. MAIN VIEW ---
 
 # A. LIST VIEW
 if st.session_state.view_mode == 'list':
-    st.title(f"📊 Market: {sel_cat} ({search_country.upper()})")
-    df = load_data_today(sel_cat, search_country)
-    
+    st.title(f"📊 Market: {sel_cat_lbl} ({sel_country_lbl})")
+    df = load_data_today(target_cat, target_country)
     if not df.empty:
         c1, c2, c3 = st.columns(3)
         with c1: 
             st.subheader("🔥 Top Free")
-            for i, r in enumerate(df[df['collection_type']=='top_free'].sort_values('rank').head(20).to_dict('records')): render_mini_card(r, search_country, i, "tf")
+            for i, (_, r) in enumerate(df[df['collection_type']=='top_free'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tf")
         with c2: 
             st.subheader("💸 Top Paid")
-            for i, r in enumerate(df[df['collection_type']=='top_paid'].sort_values('rank').head(20).to_dict('records')): render_mini_card(r, search_country, i, "tp")
+            for i, (_, r) in enumerate(df[df['collection_type']=='top_paid'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tp")
         with c3: 
             st.subheader("💰 Grossing")
-            for i, r in enumerate(df[df['collection_type']=='top_grossing'].sort_values('rank').head(20).to_dict('records')): render_mini_card(r, search_country, i, "tg")
-    else: st.info("Chưa có dữ liệu hôm nay. Bấm '🚀 Quét Chart' để lấy data.")
+            for i, (_, r) in enumerate(df[df['collection_type']=='top_grossing'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tg")
+    else: st.info("👋 Chưa có data. Hãy bấm Quét Chart.")
 
 # B. SEARCH RESULTS
 elif st.session_state.view_mode == 'search_results':
     st.button("⬅️ Quay lại", on_click=lambda: st.session_state.update(view_mode='list'))
-    st.title(f"🔎 Kết quả: '{search_term}'")
-    res = st.session_state.search_results
-    if res:
+    st.title("🔎 Kết quả tìm kiếm")
+    results = st.session_state.search_results
+    if results:
         cols = st.columns(3)
-        for i, app in enumerate(res):
-            with cols[i%3]: render_mini_card(app, search_country, i, "sr")
-    else: st.warning("Không tìm thấy kết quả.")
+        for i, app in enumerate(results):
+            with cols[i % 3]: render_mini_card(app, COUNTRIES_LIST[search_country_label], i, "sr")
+    else: st.warning("Không tìm thấy kết quả nào.")
 
 # C. DETAIL VIEW
 elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
-    meta = st.session_state.selected_app
-    app_id, country = meta['app_id'], meta['country_override']
-    st.button("⬅️ Quay lại", on_click=lambda: st.session_state.update(view_mode='list'))
+    app = st.session_state.selected_app
+    curr_country = app.get('country_override', target_country)
+    target_id = app['app_id']
 
-    # Logic Load Data
-    if st.session_state.detail_id != app_id:
-        with st.spinner(f"Đang phân tích {app_id}..."):
-            d = run_node_safe("DETAIL", app_id, country, "app_detail.json")
+    st.button("⬅️ Quay lại danh sách", on_click=lambda: st.session_state.update(view_mode='list'), use_container_width=False)
+
+    # Logic tải data
+    if st.session_state.detail_id != target_id or st.session_state.detail_country != curr_country:
+        with st.spinner(f"Đang phân tích {target_id} ({curr_country})..."):
+            st.session_state.detail_data = None
+            st.session_state.similar_apps = []
+            st.session_state.dev_apps = []
+            
+            d = run_node_safe("DETAIL", target_id, curr_country, "app_detail.json")
             if d:
                 st.session_state.detail_data = d
-                st.session_state.detail_id = app_id
                 st.session_state.current_reviews = d.get('comments', [])
-                st.session_state.next_token = d.get('nextToken')
-                st.session_state.dev_apps = [] # Reset dev apps
+                st.session_state.next_token = d.get('nextToken', None)
+                st.session_state.detail_id = target_id
+                st.session_state.detail_country = curr_country
                 
-                # Load Async Similar & Dev
-                run_node_safe("SIMILAR", app_id, country, "similar_apps.json")
+                # Gọi async các API phụ (Similar/Dev)
+                run_node_safe("SIMILAR", target_id, curr_country, "similar_apps.json")
                 if d.get('developerId'):
-                    run_node_safe("DEVELOPER", str(d['developerId']), country, "developer_apps.json")
+                    run_node_safe("DEVELOPER", str(d.get('developerId')), curr_country, "developer_apps.json")
 
+    # Render Detail UI
     d = st.session_state.detail_data
     
-    # Reload phụ (nếu có file)
+    # Load lại data phụ từ file (nếu có)
     if os.path.exists("data/similar_apps.json"):
-        try: st.session_state.similar_apps = json.load(open("data/similar_apps.json"))
+        try:
+            with open("data/similar_apps.json", "r") as f: st.session_state.similar_apps = json.load(f)
         except: pass
     if os.path.exists("data/developer_apps.json"):
-        try: st.session_state.dev_apps = json.load(open("data/developer_apps.json"))
+        try:
+            with open("data/developer_apps.json", "r") as f: st.session_state.dev_apps = json.load(f)
         except: pass
 
     if d:
-        # 1. Header & Metrics
+        # Hero Header
         badges = ""
         if d.get('adSupported'): badges += "<span class='badge badge-ad'>Ads</span>"
         if d.get('offersIAP'): badges += "<span class='badge badge-iap'>IAP</span>"
-        badges += f"<span class='badge badge-free'>{d.get('priceText') or 'Free'}</span>"
-
+        badges += f"<span class='badge badge-free'>{d.get('priceText')}</span>"
+        
         st.markdown(f"""
         <div class="hero-header">
             <img src="{d.get('icon')}" class="hero-icon-big">
             <div>
                 <h1 class="hero-title-text">{d.get('title')}</h1>
                 <div class="hero-dev-text">by {d.get('developer')}</div>
-                <div style="margin-bottom:10px;">{badges}</div>
+                <div style="margin-bottom: 10px;">{badges}</div>
                 <span class="hero-id-text">ID: {d.get('appId')}</span>
             </div>
         </div>
         """, unsafe_allow_html=True)
 
+        # Metrics
         st.markdown(f"""
         <div class="metric-grid">
-            <div class="metric-card-custom"><span class="metric-val">⭐ {d.get('score', 0):.1f}</span><span class="metric-lbl">Rating</span></div>
-            <div class="metric-card-custom"><span class="metric-val">📥 {d.get('installs', 'N/A')}</span><span class="metric-lbl">Installs</span></div>
-            <div class="metric-card-custom"><span class="metric-val">💬 {d.get('ratings', 0):,}</span><span class="metric-lbl">Reviews</span></div>
-            <div class="metric-card-custom"><span class="metric-val">🔄 {d.get('updated', 'N/A')}</span><span class="metric-lbl">Updated</span></div>
+            <div class="metric-card-custom">
+                <span class="metric-icon">⭐</span>
+                <span class="metric-value">{d.get('score', 0):.2f}</span>
+                <span class="metric-label">Rating</span>
+            </div>
+            <div class="metric-card-custom">
+                <span class="metric-icon">💬</span>
+                <span class="metric-value">{d.get('ratings', 0):,}</span>
+                <span class="metric-label">Reviews</span>
+            </div>
+            <div class="metric-card-custom">
+                <span class="metric-icon">📥</span>
+                <span class="metric-value">{d.get('installs', 'N/A')}</span>
+                <span class="metric-label">Installs</span>
+            </div>
+            <div class="metric-card-custom">
+                <span class="metric-icon">🔄</span>
+                <span class="metric-value">{d.get('updated', 'N/A')}</span>
+                <span class="metric-label">Last Update</span>
+            </div>
         </div>
         """, unsafe_allow_html=True)
 
-        # 2. Tabs Full Tính Năng
-        t1, t2, t3, t4, t5, t6 = st.tabs(["📝 Mô tả", "📊 Reviews", "🛡️ Data Safety", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Thông tin"])
+        # Đã xóa tab Retention
+        tab1, tab2, tab3, tab4 = st.tabs(["📊 Reviews", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Thông tin"])
 
-        with t1: st.markdown(d.get('descriptionHTML', ''), unsafe_allow_html=True)
-
-        # TAB REVIEW (KHÔI PHỤC FULL)
-        with t2:
-            c_fil, c_chart = st.columns([1, 2])
-            with c_fil:
-                rev_filter = st.selectbox("Lọc:", ["Tất cả", "Tích cực (4-5⭐)", "Tiêu cực (1-3⭐)"])
+        # --- TAB 1: REVIEWS (ĐÃ NÂNG CẤP) ---
+        with tab1:
+            c_filter, c_hist = st.columns([2, 3])
             
-            all_revs = st.session_state.current_reviews
-            show_revs = all_revs
-            if rev_filter == "Tích cực (4-5⭐)": show_revs = [r for r in all_revs if r.get('score', 0) >= 4]
-            if rev_filter == "Tiêu cực (1-3⭐)": show_revs = [r for r in all_revs if r.get('score', 0) <= 3]
+            # Bộ lọc review
+            with c_filter:
+                rev_filter = st.selectbox("Lọc đánh giá:", ["Tất cả", "Tích cực (4-5 ⭐)", "Tiêu cực (1-3 ⭐)"])
+                all_revs = st.session_state.current_reviews
+                
+                show_revs = all_revs
+                if rev_filter == "Tích cực (4-5 ⭐)": 
+                    show_revs = [r for r in all_revs if r.get('score', 0) >= 4]
+                elif rev_filter == "Tiêu cực (1-3 ⭐)": 
+                    show_revs = [r for r in all_revs if r.get('score', 0) <= 3]
+                
+                st.caption(f"Hiển thị {len(show_revs)} / {len(all_revs)} review.")
 
-            with c_chart:
-                hist = d.get('histogram', {})
+            # Biểu đồ Histogram
+            with c_hist:
+                hist = d.get('histogram')
                 if hist:
-                    h_df = pd.DataFrame({'Sao':['1','2','3','4','5'], 'Lượng':[hist.get(k,0) for k in ['1','2','3','4','5']]})
-                    fig = px.bar(h_df, x='Sao', y='Lượng', color='Sao', color_discrete_sequence=['#e53935','#fb8c00','#fdd835','#7cb342','#43a047'])
-                    fig.update_layout(height=150, margin=dict(t=0,b=0,l=0,r=0), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ccc', showlegend=False)
+                    # Chuyển đổi keys sang list để tránh lỗi index
+                    data_hist = {'Star': ['1','2','3','4','5'], 'V': [hist.get('1',0), hist.get('2',0), hist.get('3',0), hist.get('4',0), hist.get('5',0)]}
+                    h_df = pd.DataFrame(data_hist)
+                    fig = px.bar(h_df, x='Star', y='V', color='Star', 
+                                 color_discrete_sequence=['#e53935','#fb8c00','#fdd835','#7cb342','#43a047'])
+                    fig.update_layout(height=200, margin=dict(t=0,b=0,l=0,r=0), 
+                                      plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
+                                      font_color='#ccc', showlegend=False)
                     st.plotly_chart(fig, use_container_width=True)
-
-            st.caption(f"Hiển thị {len(show_revs)} / {len(all_revs)} đánh giá.")
+            
             st.markdown("---")
             
-            for r in show_revs:
-                st.markdown(f"""
-                <div class="review-card-modern">
-                    <div class="review-header">
-                        <span class="review-user">{r.get('userName')}</span>
-                        <span>{r.get('date')}</span>
+            # Hiển thị danh sách Review
+            if show_revs:
+                for r in show_revs:
+                    star_str = '⭐' * int(r.get('score', 0))
+                    user_name = r.get('userName', 'Người dùng ẩn')
+                    date_post = r.get('date', '')
+                    content = r.get('text', '')
+                    
+                    st.markdown(f"""
+                    <div class="review-card-modern">
+                        <div class="review-header">
+                            <span class="review-user">{user_name}</span>
+                            <span>{date_post}</span>
+                        </div>
+                        <div style="color: #ffbd45; margin-bottom: 8px;">{star_str}</div>
+                        <div class="review-text">"{content}"</div>
                     </div>
-                    <div style="color:#ffbd45;">{'⭐'*r.get('score', 0)}</div>
-                    <div style="font-style:italic; margin-top:5px; color:#ddd;">"{r.get('text')}"</div>
-                </div>""", unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Chưa có đánh giá nào phù hợp.")
 
+            # Nút tải thêm (Logic mới)
             if st.session_state.next_token:
                 if st.button("⬇️ Tải thêm review cũ hơn", use_container_width=True):
-                    with st.spinner("Đang tải..."):
-                        more = run_node_safe("MORE_REVIEWS", app_id, country, "more_reviews.json", st.session_state.next_token)
-                        if more and more.get('comments'):
-                            st.session_state.current_reviews.extend(more.get('comments'))
-                            st.session_state.next_token = more.get('nextToken')
-                            st.rerun()
-                        elif more and more.get('error'):
-                            st.warning(f"Dừng tải: {more.get('error')}")
-                            st.session_state.next_token = None
-                            st.rerun()
+                    with st.spinner("Đang kết nối Google Play..."):
+                        more = run_node_safe("MORE_REVIEWS", d['appId'], curr_country, "more_reviews.json", st.session_state.next_token)
+                        
+                        if more:
+                            # Kiểm tra nếu Node.js trả về lỗi logic
+                            if more.get('error'):
+                                st.error(f"⚠️ Không thể tải thêm: {more.get('error')}")
+                                # Nếu lỗi token hết hạn, ta xóa token đi để ẩn nút
+                                if "token" in more.get('error', '').lower():
+                                    st.session_state.next_token = None
+                                    st.rerun()
+                            else:
+                                new_comments = more.get('comments', [])
+                                if new_comments:
+                                    st.session_state.current_reviews.extend(new_comments)
+                                    st.session_state.next_token = more.get('nextToken')
+                                    st.success(f"Đã tải thêm {len(new_comments)} review!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.warning("Không tìm thấy review nào cũ hơn.")
+                                    st.session_state.next_token = None
+                                    st.rerun()
                         else:
-                            st.info("Đã hết review."); st.session_state.next_token = None; st.rerun()
+                            st.error("❌ Lỗi kết nối Server (Scraper Crash). Vui lòng thử lại.")
+        with tab2:
+            sims = st.session_state.similar_apps
+            if sims:
+                filtered_sims = [s for s in sims if s['appId'] != d['appId']]
+                if filtered_sims:
+                    sc = st.columns(3)
+                    for i, s in enumerate(filtered_sims[:9]): render_mini_card(s, curr_country, i, "sim")
+                else: st.warning("Không có đối thủ khác.")
+            else: st.info("Chưa tìm thấy dữ liệu.")
 
-        # TAB DATA SAFETY (MỚI)
-        with t3:
-            ds = d.get('dataSafety', {})
-            if ds:
-                st.info(ds.get('summary', ''))
-                c_s, c_c = st.columns(2)
-                with c_s: 
-                    st.markdown("### 📤 Shared Data")
-                    for x in ds.get('sharedData', []): st.write(f"- {x.get('data')}: {x.get('purpose')}")
-                with c_c:
-                    st.markdown("### 📥 Collected Data")
-                    for x in ds.get('collectedData', []): st.write(f"- {x.get('data')}: {x.get('purpose')}")
-            else: st.warning("Không có thông tin Data Safety.")
+        with tab3:
+            devs = st.session_state.dev_apps
+            if devs:
+                filtered_devs = [dv for dv in devs if dv['appId'] != d['appId']]
+                if filtered_devs:
+                    dc = st.columns(3)
+                    for i, dv in enumerate(filtered_devs[:9]): render_mini_card(dv, curr_country, i, "dev")
+                else: st.info("Dev này chỉ có 1 app này.")
+            else: st.info("Chưa tìm thấy dữ liệu.")
 
-        # TAB ĐỐI THỦ
-        with t4:
-            if st.session_state.similar_apps:
-                cols = st.columns(3)
-                for i, s in enumerate(st.session_state.similar_apps[:9]):
-                    with cols[i%3]: render_mini_card(s, country, i, "sim")
-            else: st.info("Đang tải hoặc không có đối thủ...")
+        with tab4:
+            c_tech, c_contact = st.columns(2)
+            with c_tech:
+                st.markdown("#### 📱 Kỹ thuật")
+                st.write(f"📅 **Released:** {d.get('released')}")
+                st.write(f"🔄 **Updated:** {d.get('updated')}")
+                st.write(f"🏷️ **Version:** {d.get('version')}")
+                st.write(f"💾 **Size:** {d.get('size')}")
+                st.write(f"🤖 **Android:** {d.get('androidVersion')}")
+                st.write(f"💰 **IAP:** {d.get('IAPRange')}")
 
-        # TAB CÙNG DEV (KHÔI PHỤC)
-        with t5:
-            if st.session_state.dev_apps:
-                cols = st.columns(3)
-                # Lọc bỏ app hiện tại
-                dev_list = [a for a in st.session_state.dev_apps if a.get('appId') != app_id]
-                for i, s in enumerate(dev_list[:9]):
-                    with cols[i%3]: render_mini_card(s, country, i, "dev")
-            else: st.info("Dev này chỉ có 1 app này hoặc đang tải...")
+            with c_contact:
+                st.markdown("#### 📬 Liên hệ")
+                st.write(f"🆔 **Dev ID:** {d.get('developerId')}")
+                if d.get('developerEmail'): st.write(f"📧 **Email:** {d.get('developerEmail')}")
+                if d.get('developerWebsite'): st.write(f"🌐 **Website:** [Link]({d.get('developerWebsite')})")
+                if d.get('developerAddress'): st.write(f"🏢 **Address:** {d.get('developerAddress')}")
+                if d.get('privacyPolicy'): st.write(f"🔒 **Privacy Policy:** [Link]({d.get('privacyPolicy')})")
 
-        # TAB THÔNG TIN
-        with t6:
-            c1, c2 = st.columns(2)
-            with c1:
-                st.write(f"**Version:** {d.get('version')}")
-                st.write(f"**Android:** {d.get('androidVersion')}")
-                st.write(f"**Email:** {d.get('developerEmail')}")
-            with c2:
-                st.write(f"**Website:** {d.get('developerWebsite')}")
-                st.write(f"**Address:** {d.get('developerAddress')}")
-                st.write(f"**Privacy:** [Link]({d.get('privacyPolicy')})")
-            
             st.markdown("---")
-            st.markdown("### 🔑 Permissions")
-            if d.get('permissions'):
-                for p in d.get('permissions'):
-                    st.markdown(f"- **{p.get('permission')}**: {p.get('description') or ''}")
-            else: st.info("Không yêu cầu quyền đặc biệt.")
+            st.markdown("#### 🛡️ Quyền truy cập")
+            perms = d.get('permissions', [])
+            if perms:
+                for p in perms:
+                    perm_text = p.get('permission') if isinstance(p, dict) else str(p)
+                    st.markdown(f"<span class='perm-tag'>{perm_text}</span>", unsafe_allow_html=True)
+            else: st.info("App này không yêu cầu quyền đặc biệt.")
+
+            st.markdown("---")
+            if d.get('recentChanges'):
+                st.markdown("#### 🆕 Có gì mới")
+                st.info(d.get('recentChanges'))
+
+            st.markdown("#### 📝 Mô tả")
+            with st.expander("Xem toàn bộ", expanded=True):
+                st.markdown(d.get('descriptionHTML', ''), unsafe_allow_html=True)
