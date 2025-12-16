@@ -9,37 +9,66 @@ import plotly.graph_objects as go
 import plotly.express as px
 import re
 import time
+import shutil
 
-# --- TỰ ĐỘNG CÀI NODE MODULES (PHIÊN BẢN FIX MẠNH MẼ) ---
-def install_node_dependencies():
-    """Kiểm tra và cài đặt thư viện Node.js nếu thiếu"""
-    # 1. Kiểm tra xem file package.json có tồn tại không (Quan trọng!)
-    if not os.path.exists("package.json"):
-        st.error("🚨 LỖI NGHIÊM TRỌNG: Không tìm thấy file 'package.json'.")
-        st.warning("👉 Bạn hãy kiểm tra lại GitHub xem đã có file 'package.json' chưa.")
-        st.stop() # Dừng app ngay lập tức
+st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
+DB_PATH = 'data/market_data.db'
+NODE_SCRIPT = 'scraper.js'
 
-    # 2. Kiểm tra xem thư viện google-play-scraper đã nằm trong node_modules chưa
-    # (Thay vì chỉ check folder node_modules chung chung)
-    lib_path = os.path.join("node_modules", "google-play-scraper")
-    
-    if not os.path.exists(lib_path):
-        with st.status("⚙️ Đang cài đặt thư viện Google Play Scraper...", expanded=True) as status:
-            st.write("Đang chạy lệnh: `npm install`...")
-            try:
-                # Chạy npm install và bắt lấy kết quả
-                result = subprocess.run(["npm", "install"], capture_output=True, text=True, check=True)
-                st.code(result.stdout) # In log ra để xem
-                status.update(label="✅ Cài đặt thành công!", state="complete")
-                time.sleep(1) # Chờ 1 giây cho hệ thống ổn định
-            except subprocess.CalledProcessError as e:
-                status.update(label="❌ Cài đặt thất bại", state="error")
-                st.error("Lỗi khi chạy npm install:")
+# --- HỆ THỐNG TỰ ĐỘNG CÀI ĐẶT & KIỂM TRA NODE.JS ---
+def ensure_node_environment():
+    """
+    Hàm này kiểm tra xem Node.js có chạy được thư viện không.
+    Nếu không, nó sẽ tự động chạy npm install.
+    """
+    # 1. Check nhanh: Thử chạy lệnh Node yêu cầu thư viện
+    # Nếu lệnh này chạy thành công (returncode 0), nghĩa là thư viện đã OK.
+    try:
+        check_cmd = ["node", "-e", "require('google-play-scraper')"]
+        subprocess.run(check_cmd, check=True, capture_output=True)
+        return True # Đã cài đặt ngon lành
+    except (subprocess.CalledProcessError, FileNotFoundError):
+        pass # Chưa cài hoặc lỗi -> Xuống phần cài đặt
+
+    # 2. Nếu chưa có, tiến hành cài đặt
+    placeholder = st.empty()
+    with placeholder.container():
+        st.warning("⚠️ Phát hiện thiếu thư viện Node.js. Đang tự động cài đặt...")
+        progress = st.progress(0)
+        
+        # Kiểm tra file package.json
+        if not os.path.exists("package.json"):
+            st.error("🚨 LỖI: Không tìm thấy file 'package.json' trên GitHub!")
+            st.stop()
+            
+        try:
+            progress.progress(20, text="Đang chạy npm install...")
+            # Chạy npm install
+            process = subprocess.run(
+                ["npm", "install"], 
+                capture_output=True, 
+                text=True, 
+                check=True
+            )
+            progress.progress(90, text="Đang kiểm tra lại...")
+            
+            # Kiểm tra lại lần nữa
+            subprocess.run(["node", "-e", "require('google-play-scraper')"], check=True)
+            
+            progress.progress(100, text="Hoàn tất!")
+            st.success("✅ Đã cài đặt xong môi trường! Đang khởi động lại...")
+            time.sleep(1)
+            st.rerun() # Tự động load lại trang
+            
+        except subprocess.CalledProcessError as e:
+            st.error("❌ Cài đặt thất bại! Chi tiết lỗi:")
+            with st.expander("Xem Log chi tiết"):
                 st.code(e.stderr)
-                st.stop()
+                st.code(e.stdout)
+            st.stop()
 
-# Gọi hàm này ngay đầu chương trình
-install_node_dependencies()
+# Gọi hàm này ngay lập tức khi App chạy
+ensure_node_environment()
 
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
