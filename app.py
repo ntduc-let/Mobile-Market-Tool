@@ -703,11 +703,53 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             else:
                 st.warning(f"Không tìm thấy ứng dụng nào khác của '{d.get('developer')}'.")
 
-        # TAB 6: INFO (Code cũ, đưa vào tab cuối)
+        # --- TAB 6: INFO (ĐÃ NÂNG CẤP: ĐẦY ĐỦ THÔNG SỐ) ---
         with tab6:
-            st.markdown("#### 📝 Mô tả chi tiết")
-            st.markdown(d.get('descriptionHTML', ''), unsafe_allow_html=True)
+            # 1. Nhóm thông tin Kỹ thuật & Phân loại
+            c_tech, c_cat = st.columns(2)
+            
+            with c_tech:
+                st.markdown("#### 📱 Kỹ thuật")
+                st.write(f"**📦 ID:** `{d.get('appId')}`")
+                st.write(f"**🏷️ Version:** {d.get('version', 'Varies with device')}")
+                st.write(f"**💾 Size:** {d.get('size', 'Varies with device')}")
+                st.write(f"**🤖 Android:** {d.get('androidVersion', 'Varies')}")
+            
+            with c_cat:
+                st.markdown("#### 🏷️ Phân loại")
+                st.write(f"**📂 Genre:** {d.get('genre')}")
+                st.write(f"**🔞 Content Rating:** {d.get('contentRating')}")
+                st.write(f"**📅 Released:** {d.get('released')}")
+                st.write(f"**🔄 Updated:** {d.get('updated')}")
+
             st.divider()
-            st.write(f"**Released:** {d.get('released')}")
-            st.write(f"**Privacy Policy:** {d.get('privacyPolicy')}")
-            st.write(f"**Address:** {d.get('developerAddress')}")
+
+            # 2. Nhóm thông tin "Có gì mới" (Rất quan trọng để theo dõi update)
+            if d.get('recentChanges'):
+                st.markdown("#### 🆕 Có gì mới trong phiên bản này")
+                st.info(d.get('recentChanges'))
+                st.divider()
+
+            # 3. Nhóm liên hệ Developer
+            st.markdown("#### 📬 Liên hệ Nhà phát triển")
+            c_contact1, c_contact2 = st.columns(2)
+            
+            with c_contact1:
+                if d.get('developerEmail'): 
+                    st.write(f"📧 **Email:** {d.get('developerEmail')}")
+                if d.get('developerWebsite'): 
+                    st.write(f"🌐 **Website:** [Truy cập]({d.get('developerWebsite')})")
+            
+            with c_contact2:
+                if d.get('privacyPolicy'): 
+                    st.write(f"🔒 **Privacy Policy:** [Xem chính sách]({d.get('privacyPolicy')})")
+                if d.get('developerAddress'): 
+                    st.write(f"🏢 **Address:** {d.get('developerAddress')}")
+
+            st.divider()
+
+            # 4. Mô tả chi tiết (HTML)
+            st.markdown("#### 📝 Mô tả ứng dụng")
+            # Dùng Expander để nội dung không bị quá dài nếu mô tả nhiều
+            with st.expander("Xem toàn bộ nội dung mô tả", expanded=True):
+                st.markdown(d.get('descriptionHTML', 'Chưa có mô tả.'), unsafe_allow_html=True)
