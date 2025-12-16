@@ -324,12 +324,26 @@ target_cat = CATEGORIES_LIST[sel_cat_lbl]
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
     with st.status("Đang quét..."):
         try:
-            subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True)
+            # Thêm capture_output=True để bắt lấy nội dung lỗi từ Node.js
+            result = subprocess.run(
+                ["node", NODE_SCRIPT, "LIST", target_cat, target_country], 
+                check=True, 
+                text=True, 
+                capture_output=True
+            )
+            
             if save_data_to_db(target_cat, target_country):
                 st.session_state.view_mode = 'list'
                 st.rerun()
-            else: st.error("Không lưu được DB.")
-        except: st.error("Lỗi quét chart.")
+            else: 
+                st.error("Không lưu được vào Database.")
+                
+        except subprocess.CalledProcessError as e:
+            # IN RA LỖI THỰC SỰ
+            st.error(f"❌ Lỗi chạy Node.js (Exit Code {e.returncode})")
+            st.code(e.stderr, language="bash") # Hiển thị thông báo lỗi từ Terminal lên Web
+        except Exception as ex:
+            st.error(f"❌ Lỗi không xác định: {str(ex)}")
 
 # --- MAIN VIEW ---
 
