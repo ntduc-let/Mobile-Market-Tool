@@ -271,61 +271,63 @@ st.markdown("""
         /* Lý do: Nó làm chuột click "xuyên qua" ảnh trúng vào nền web, gây mất focus */
         pointer-events: none; 
     }
-    * 1. Ẩn ô checkbox (chỉ dùng để lưu trạng thái đóng/mở) */
-    .lightbox-toggle { display: none; }
+            
+    * 1. Ẩn tuyệt đối checkbox */
+    .lightbox-toggle { display: none !important; }
 
-    /* 2. Khung cuộn ngang chứa danh sách ảnh */
+    /* 2. Container cuộn ngang */
     .screenshot-scroll { 
         overflow-x: auto; 
         white-space: nowrap; 
-        padding-bottom: 10px;
+        padding-bottom: 15px;
         scrollbar-width: thin;
     }
 
-    /* 3. Style cho ảnh THUMBNAIL (Ảnh nhỏ hiển thị trên web) */
+    /* 3. Ảnh Thumbnail (TO HƠN) */
     .thumb-label {
         display: inline-block;
-        margin-right: 12px;
+        margin-right: 15px;
         cursor: zoom-in;
         transition: transform 0.2s;
         border: 1px solid #444;
-        border-radius: 8px;
+        border-radius: 10px;
+        overflow: hidden; /* Cắt góc ảnh */
     }
     .thumb-label:hover { transform: scale(1.02); border-color: #64b5f6; }
     
     .thumb-img {
-        height: 200px; /* Chiều cao cố định */
+        height: 300px; /* [UPDATE] Tăng từ 200px lên 300px */
         width: auto;
         display: block;
-        border-radius: 8px;
     }
 
-    /* 4. Màn hình đen phủ kín (OVERLAY) - Mặc định ẩn */
+    /* 4. Overlay (Màn hình đen) */
     .lightbox-overlay {
-        display: none; /* Ẩn */
+        display: none;
         position: fixed;
         top: 0; left: 0;
         width: 100vw; height: 100vh;
-        background: rgba(0, 0, 0, 0.95); /* Nền đen 95% */
-        z-index: 999999; /* Luôn nằm trên cùng */
+        background: rgba(0, 0, 0, 0.95);
+        z-index: 999999;
         justify-content: center;
         align-items: center;
         cursor: zoom-out;
-        backdrop-filter: blur(5px);
     }
 
-    /* 5. LOGIC KÍCH HOẠT: Khi checkbox được chọn -> Hiện Overlay */
+    /* 5. Logic hiện Overlay */
     .lightbox-toggle:checked ~ .lightbox-overlay {
         display: flex;
         animation: fadeIn 0.2s ease-out;
     }
 
-    /* 6. Ảnh phóng to bên trong */
+    /* 6. Ảnh Phóng to (MAX SIZE) */
     .full-img {
-        max-width: 95%;
-        max-height: 95%;
-        object-fit: contain;
-        box-shadow: 0 0 20px rgba(0,0,0,0.5);
+        /* [UPDATE] Tăng tối đa kích thước hiển thị */
+        width: 98vw; 
+        height: 98vh;
+        max-width: none; 
+        max-height: none;
+        object-fit: contain; /* Giữ tỷ lệ ảnh */
     }
 
     @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
@@ -711,7 +713,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         else: 
                             st.error("Không phản hồi từ Server.")
 
-        # --- TAB 2: MEDIA (FIX LỖI HIỂN THỊ CODE HTML) ---
+        # --- TAB 2: MEDIA (FIXED: ẨN CHECKBOX & ẢNH TO) ---
         with tab2:
             # 1. Video
             if d.get('video'):
@@ -719,12 +721,12 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 st.video(d.get('video'))
                 st.divider()
             
-            # 2. Screenshots (Đã fix lỗi hiển thị text)
+            # 2. Screenshots
             if d.get('screenshots'):
                 st.subheader("🖼️ Screenshots")
-                st.caption("💡 Click ảnh để phóng to. Click vùng đen để đóng.")
+                st.caption("💡 Click ảnh để phóng to (Full màn hình).")
 
-                # Chuẩn bị HTML - Viết liền 1 dòng hoặc dùng textwrap để tránh lỗi Markdown hiểu nhầm là Code Block
+                # HTML Content - Viết liền mạch để tránh lỗi Markdown code block
                 html_content = '<div class="screenshot-scroll">'
                 
                 base_id = d.get('appId', 'app').replace('.', '_')
@@ -732,8 +734,8 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 for i, url in enumerate(d.get('screenshots')):
                     unique_id = f"img_{base_id}_{i}"
                     
-                    # QUAN TRỌNG: F-string được viết sát lề trái để tránh khoảng trắng thừa
-                    html_content += f"""<div style="display:inline-block; margin-right:10px;">
+                    # Cấu trúc HTML (Không thụt đầu dòng bên trong f-string)
+                    html_content += f"""<div style="display:inline-block;">
                                         <input type="checkbox" id="{unique_id}" class="lightbox-toggle">
                                         <label for="{unique_id}" class="thumb-label">
                                         <img src="{url}" class="thumb-img" loading="lazy">
@@ -745,8 +747,6 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                                     """
                 
                 html_content += '</div>'
-                
-                # QUAN TRỌNG NHẤT: Phải có unsafe_allow_html=True
                 st.markdown(html_content, unsafe_allow_html=True)
             else: 
                 st.info("Không có ảnh chụp màn hình.")
