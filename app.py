@@ -7,66 +7,121 @@ import json
 import datetime
 import plotly.graph_objects as go
 import plotly.express as px
-import re
 import time
 import shutil
 
-# --- CẤU HÌNH TRANG (PHẢI ĐỂ ĐẦU TIÊN) ---
+# --- CẤU HÌNH TRANG ---
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 
 # --- HẰNG SỐ ---
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- [DEPLOY FIX] HÀM KIỂM TRA MÔI TRƯỜNG ---
+# --- HÀM KHỞI TẠO MÔI TRƯỜNG (RESET NODEJS) ---
 def init_environment():
-    """Kiểm tra và cài đặt môi trường cần thiết cho Streamlit Cloud"""
+    """Kiểm tra và cài đặt môi trường Node.js 18"""
     
-    # 1. Tạo thư mục data nếu chưa có
+    # 1. Tạo thư mục data
     if not os.path.exists('data'):
         os.makedirs('data')
 
-    # 2. HARD RESET: Xóa sạch thư viện cũ để tránh xung đột version
-    # File 'install_flag' dùng để đánh dấu đã reset xong chưa
-    install_flag = "install_done_v9_1.lock" # Đổi tên lock file để chắc chắn nó chạy lại
+    # 2. HARD RESET: Xóa sạch thư viện cũ để tránh xung đột
+    # Đổi tên file lock để ép hệ thống chạy lại quy trình này
+    lock_file = "install_clean_v9.lock"
 
-    if not os.path.exists(install_flag):
-        # SỬA LỖI Ở ĐÂY: icon="🧹" thay vì icon="php"
-        st.toast("Đang dọn dẹp thư viện cũ lỗi thời...", icon="🧹")
+    if not os.path.exists(lock_file):
+        status_container = st.empty()
+        status_container.toast("Đang dọn dẹp thư viện cũ...", icon="🧹")
         
         # Xóa node_modules cũ
         if os.path.exists('node_modules'):
-            try:
-                shutil.rmtree('node_modules')
-            except:
-                pass # Bỏ qua lỗi nếu không xóa được
+            try: shutil.rmtree('node_modules')
+            except: pass
             
-        # QUAN TRỌNG: Xóa package-lock.json để npm không cài lại bản lỗi cũ
+        # Xóa package-lock.json cũ
         if os.path.exists('package-lock.json'):
-            os.remove('package-lock.json')
+            try: os.remove('package-lock.json')
+            except: pass
 
-        st.toast("Đang cài đặt thư viện Node.js (v9.1.0)...", icon="⏳")
+        status_container.toast("Đang cài đặt thư viện Node.js (v9.1.0)...", icon="⏳")
         try:
             # Chạy npm install
             subprocess.run(['npm', 'install'], check=True)
             
-            # Đánh dấu đã cài xong
-            with open(install_flag, 'w') as f:
-                f.write("ok")
+            # Tạo file lock đánh dấu thành công
+            with open(lock_file, 'w') as f:
+                f.write("installed")
                 
-            st.toast("Cài đặt thành công! Đang khởi động lại...", icon="✅")
+            status_container.toast("Cài đặt xong! Đang khởi động lại...", icon="✅")
             time.sleep(1)
             st.rerun()
         except subprocess.CalledProcessError as e:
-            st.error(f"❌ Lỗi khi cài đặt: {e}")
+            st.error(f"❌ Lỗi cài đặt Node.js: {e}")
             st.stop()
 
-# Gọi hàm khởi tạo
 init_environment()
 
-# --- DANH SÁCH THỂ LOẠI (FULL CATEGORIES) ---
+# --- BACKEND FUNCTIONS ---
+def run_node_safe(mode, target, country, output_file, token=None):
+    file_path = f"data/{output_file}"
+    if os.path.exists(file_path):
+        try: os.remove(file_path)
+        except: pass
+        
+    try:
+        args = ["node", NODE_SCRIPT, mode, target, country]
+        if token: args.append(token)
+        # Capture output để debug nếu cần
+        result = subprocess.run(args, capture_output=True, text=True, check=True)
+        # print(result.stdout) # Uncomment để debug log
+    except subprocess.CalledProcessError as e:
+        print(f"Node Error: {e.stderr}")
+        return None
+
+    if os.path.exists(file_path):
+        try:
+            with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
+        except: return None
+    return None
+
+def save_data_to_db(category_id, country_code):
+    if not os.path.exists("data/raw_data.json"): return False
+    with open("data/raw_data.json", 'r', encoding='utf-8') as f: data = json.load(f)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''CREATE TABLE IF NOT EXISTS app_history (
+            scraped_at TIMESTAMP, category TEXT, country TEXT, collection_type TEXT,
+            rank INT, app_id TEXT, title TEXT, developer TEXT, score REAL,
+            installs TEXT, price REAL, currency TEXT, icon TEXT, reviews INT)''')
+    today = datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')
+    cursor.execute("DELETE FROM app_history WHERE category=? AND country=? AND scraped_at>=?", (category_id, country_code, today))
+    clean = []
+    ts = datetime.datetime.now()
+    for i in data:
+        clean.append((ts, i.get('category'), i.get('country'), i.get('collection_type'), i.get('rank'), i.get('appId'), i.get('title'), i.get('developer'), i.get('score', 0), i.get('installs', 'N/A'), i.get('price', 0), 'VND', i.get('icon', ''), 0))
+    cursor.executemany('INSERT INTO app_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', clean)
+    conn.commit(); conn.close()
+    return True
+
+def load_data_today(cat, country):
+    if not os.path.exists(DB_PATH): return pd.DataFrame()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        today = datetime.datetime.now().strftime('%Y-%m-%d')
+        df = pd.read_sql(f"SELECT * FROM app_history WHERE category='{cat}' AND country='{country}' AND strftime('%Y-%m-%d', scraped_at)='{today}'", conn)
+        conn.close(); return df
+    except: conn.close(); return pd.DataFrame()
+
+def load_app_history(app_id, country):
+    if not os.path.exists(DB_PATH): return pd.DataFrame()
+    conn = sqlite3.connect(DB_PATH)
+    try:
+        df = pd.read_sql(f"SELECT scraped_at, rank, collection_type FROM app_history WHERE app_id='{app_id}' AND country='{country}' ORDER BY scraped_at ASC", conn)
+        conn.close(); return df
+    except: return pd.DataFrame()
+
+# --- DANH SÁCH THỂ LOẠI (GIỮ NGUYÊN DANH SÁCH CŨ CỦA BẠN) ---
 CATEGORIES_LIST = {
-    # ================= GAMES (TRÒ CHƠI) =================
     "🎮 Game: Hành động (Action)": "GAME_ACTION",
     "🎮 Game: Phiêu lưu (Adventure)": "GAME_ADVENTURE",
     "🎮 Game: Giải trí (Arcade)": "GAME_ARCADE",
@@ -84,8 +139,6 @@ CATEGORIES_LIST = {
     "🎮 Game: Chiến thuật (Strategy)": "GAME_STRATEGY",
     "🎮 Game: Đố vui (Trivia)": "GAME_TRIVIA",
     "🎮 Game: Từ vựng (Word)": "GAME_WORD",
-
-    # ================= APPS (ỨNG DỤNG) =================
     "🎨 Nghệ thuật & Thiết kế (Art & Design)": "ART_AND_DESIGN",
     "🚗 Ô tô & Xe cộ (Auto & Vehicles)": "AUTO_AND_VEHICLES",
     "💄 Làm đẹp (Beauty)": "BEAUTY",
@@ -120,9 +173,8 @@ CATEGORIES_LIST = {
     "⛅ Thời tiết (Weather)": "WEATHER"
 }
 
-# --- DANH SÁCH QUỐC GIA (FULL LIST) ---
+# --- DANH SÁCH QUỐC GIA (GIỮ NGUYÊN DANH SÁCH CŨ CỦA BẠN) ---
 COUNTRIES_LIST = {
-    # --- CHÂU Á (ASIA) ---
     "🇻🇳 Việt Nam (VN)": "vn",
     "🇯🇵 Nhật Bản (Japan)": "jp",
     "🇰🇷 Hàn Quốc (Korea)": "kr",
@@ -137,12 +189,8 @@ COUNTRIES_LIST = {
     "🇮🇳 Ấn Độ (India)": "in",
     "🇵🇰 Pakistan": "pk",
     "🇧🇩 Bangladesh": "bd",
-    
-    # --- BẮC MỸ (NORTH AMERICA) ---
     "🇺🇸 Hoa Kỳ (USA)": "us",
     "🇨🇦 Canada": "ca",
-    
-    # --- CHÂU ÂU (EUROPE) ---
     "🇬🇧 Anh Quốc (United Kingdom)": "gb",
     "🇩🇪 Đức (Germany)": "de",
     "🇫🇷 Pháp (France)": "fr",
@@ -165,20 +213,14 @@ COUNTRIES_LIST = {
     "🇧🇪 Bỉ (Belgium)": "be",
     "🇦🇹 Áo (Austria)": "at",
     "🇮🇪 Ireland": "ie",
-    
-    # --- CHÂU ĐẠI DƯƠNG (OCEANIA) ---
     "🇦🇺 Úc (Australia)": "au",
     "🇳🇿 New Zealand": "nz",
-    
-    # --- MỸ LATINH (LATAM) ---
     "🇧🇷 Brazil": "br",
     "🇲🇽 Mexico": "mx",
     "🇦🇷 Argentina": "ar",
     "🇨🇱 Chile": "cl",
     "🇨🇴 Colombia": "co",
     "🇵🇪 Peru": "pe",
-    
-    # --- TRUNG ĐÔNG & CHÂU PHI (MENA) ---
     "🇸🇦 Ả Rập Xê Út (Saudi Arabia)": "sa",
     "🇦🇪 UAE (Các Tiểu vương quốc Ả Rập)": "ae",
     "🇮🇱 Israel": "il",
@@ -204,7 +246,6 @@ if 'dev_apps' not in st.session_state: st.session_state.dev_apps = []
 # --- CSS ---
 st.markdown("""
 <style>
-    /* --- Giao diện thẻ Mini (List View) --- */
     .app-card-modern {
         background: linear-gradient(145deg, #1e2028, #23252e);
         border-radius: 16px; padding: 16px; margin-bottom: 16px;
@@ -220,7 +261,6 @@ st.markdown("""
     .app-publisher-modern { font-size: 0.9em; color: #b0b3b8; margin-bottom: 8px; }
     .metric-score { color: #ffbd45; font-weight: 700; font-size: 0.95em; display: flex; align-items: center; }
 
-    /* --- Giao diện Detail (MỚI) --- */
     .hero-header {
         display: flex; gap: 25px; padding: 25px;
         background: linear-gradient(135deg, #2a2d3a 0%, #1e2028 100%);
@@ -262,71 +302,6 @@ st.markdown("""
     hr { border-color: #444; margin: 30px 0; }
 </style>
 """, unsafe_allow_html=True)
-
-# --- BACKEND FUNCTIONS ---
-def run_node_safe(mode, target, country, output_file, token=None):
-    file_path = f"data/{output_file}"
-    # Xóa file cũ để tránh đọc data rác
-    if os.path.exists(file_path):
-        try: os.remove(file_path)
-        except: pass
-        
-    try:
-        args = ["node", NODE_SCRIPT, mode, target, country]
-        if token: args.append(token)
-        # Check=True để bắt lỗi nếu Node script fail
-        subprocess.run(args, capture_output=True, text=True, check=True)
-        time.sleep(0.5)
-    except subprocess.CalledProcessError as e:
-        # Nếu lỗi thì in ra log để debug (chỉ hiện trong logs server)
-        print(f"Node Error: {e.stderr}")
-        return None
-    except Exception as e:
-        print(f"System Error: {e}")
-        return None
-
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
-        except: return None
-    return None
-
-def save_data_to_db(category_id, country_code):
-    if not os.path.exists("data/raw_data.json"): return False
-    with open("data/raw_data.json", 'r', encoding='utf-8') as f: data = json.load(f)
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    cursor.execute('''CREATE TABLE IF NOT EXISTS app_history (
-            scraped_at TIMESTAMP, category TEXT, country TEXT, collection_type TEXT,
-            rank INT, app_id TEXT, title TEXT, developer TEXT, score REAL,
-            installs TEXT, price REAL, currency TEXT, icon TEXT, reviews INT)''')
-    today = datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')
-    # Xóa data cũ của ngày hôm nay để tránh duplicate khi quét lại
-    cursor.execute("DELETE FROM app_history WHERE category=? AND country=? AND scraped_at>=?", (category_id, country_code, today))
-    clean = []
-    ts = datetime.datetime.now()
-    for i in data:
-        clean.append((ts, i.get('category'), i.get('country'), i.get('collection_type'), i.get('rank'), i.get('appId'), i.get('title'), i.get('developer'), i.get('score', 0), i.get('installs', 'N/A'), i.get('price', 0), 'VND', i.get('icon', ''), 0))
-    cursor.executemany('INSERT INTO app_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', clean)
-    conn.commit(); conn.close()
-    return True
-
-def load_data_today(cat, country):
-    if not os.path.exists(DB_PATH): return pd.DataFrame()
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        today = datetime.datetime.now().strftime('%Y-%m-%d')
-        df = pd.read_sql(f"SELECT * FROM app_history WHERE category='{cat}' AND country='{country}' AND strftime('%Y-%m-%d', scraped_at)='{today}'", conn)
-        conn.close(); return df
-    except: conn.close(); return pd.DataFrame()
-
-def load_app_history(app_id, country):
-    if not os.path.exists(DB_PATH): return pd.DataFrame()
-    conn = sqlite3.connect(DB_PATH)
-    try:
-        df = pd.read_sql(f"SELECT scraped_at, rank, collection_type FROM app_history WHERE app_id='{app_id}' AND country='{country}' ORDER BY scraped_at ASC", conn)
-        conn.close(); return df
-    except: return pd.DataFrame()
 
 # --- CARD UI ---
 def render_mini_card(app, country, rank_idx, key_prefix):
