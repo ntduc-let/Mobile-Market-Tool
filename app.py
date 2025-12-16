@@ -543,31 +543,35 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             # Nút tải thêm (Logic mới)
             if st.session_state.next_token:
                 if st.button("⬇️ Tải thêm review cũ hơn", use_container_width=True):
-                    with st.spinner("Đang kết nối Google Play..."):
+                    with st.spinner("Đang tải..."):
+                        # Gọi Node.js
                         more = run_node_safe("MORE_REVIEWS", d['appId'], curr_country, "more_reviews.json", st.session_state.next_token)
                         
                         if more:
-                            # Kiểm tra nếu Node.js trả về lỗi logic
+                            # 1. Kiểm tra xem Node.js có báo lỗi mềm (Token hết hạn) không
                             if more.get('error'):
-                                st.error(f"⚠️ Không thể tải thêm: {more.get('error')}")
-                                # Nếu lỗi token hết hạn, ta xóa token đi để ẩn nút
-                                if "token" in more.get('error', '').lower():
-                                    st.session_state.next_token = None
-                                    st.rerun()
-                            else:
+                                st.warning(f"⚠️ Dừng tải: {more.get('error')}")
+                                # Nếu lỗi token, xóa token đi để ẩn nút
+                                st.session_state.next_token = None
+                                time.sleep(2)
+                                st.rerun()
+                                
+                            # 2. Nếu có dữ liệu review mới
+                            elif more.get('comments'):
                                 new_comments = more.get('comments', [])
-                                if new_comments:
-                                    st.session_state.current_reviews.extend(new_comments)
-                                    st.session_state.next_token = more.get('nextToken')
-                                    st.success(f"Đã tải thêm {len(new_comments)} review!")
-                                    time.sleep(1)
-                                    st.rerun()
-                                else:
-                                    st.warning("Không tìm thấy review nào cũ hơn.")
-                                    st.session_state.next_token = None
-                                    st.rerun()
+                                st.session_state.current_reviews.extend(new_comments)
+                                st.session_state.next_token = more.get('nextToken')
+                                st.success(f"Đã tải thêm {len(new_comments)} review!")
+                                time.sleep(1)
+                                st.rerun()
+                                
+                            # 3. Trường hợp không lỗi nhưng cũng không có comment
+                            else:
+                                st.info("Đã hết review để tải.")
+                                st.session_state.next_token = None
+                                st.rerun()
                         else:
-                            st.error("❌ Lỗi kết nối Server (Scraper Crash). Vui lòng thử lại.")
+                            st.error("❌ Lỗi kết nối. Vui lòng thử lại.")
         with tab2:
             sims = st.session_state.similar_apps
             if sims:
