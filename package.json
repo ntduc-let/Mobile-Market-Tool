@@ -4,7 +4,7 @@
   "description": "Scraper for Streamlit App",
   "main": "scraper.js",
   "dependencies": {
-    "google-play-scraper": "^10.1.2"
+    "google-play-scraper": "^9.1.1"
   },
   "scripts": {
     "start": "node scraper.js"
