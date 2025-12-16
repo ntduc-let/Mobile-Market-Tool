@@ -12,14 +12,13 @@ import time
 
 # --- 1. HÀM CÀI ĐẶT NODE MODULES TỰ ĐỘNG ---
 def ensure_node_modules():
-    # Kiểm tra xem folder node_modules đã có chưa
+    # Kiểm tra xem folder node_modules đã tồn tại chưa
     if not os.path.exists('node_modules'):
-        with st.spinner('Đang cài đặt thư viện google-play-scraper...'):
+        with st.spinner('Đang cài đặt thư viện Node.js (Lần đầu chạy sẽ hơi lâu)...'):
             try:
-                # THAY ĐỔI Ở ĐÂY: Cài đích danh thư viện, không dùng 'npm install' chung chung
-                subprocess.run(['npm', 'install', 'google-play-scraper'], check=True, shell=True)
-                
-                st.success('Cài đặt xong!')
+                # Chạy npm install
+                subprocess.run(['npm', 'install'], check=True, shell=True)
+                st.success('Cài đặt môi trường Node thành công!')
             except subprocess.CalledProcessError as e:
                 st.error(f"Lỗi khi cài npm: {e}")
                 st.stop() # Dừng app nếu không cài được
