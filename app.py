@@ -271,11 +271,6 @@ st.markdown("""
         /* Lý do: Nó làm chuột click "xuyên qua" ảnh trúng vào nền web, gây mất focus */
         pointer-events: none; 
     }
-</style>
-""", unsafe_allow_html=True)
-# --- BỔ SUNG CSS LIGHTBOX (Dán đoạn này ngay sau block CSS cũ của bạn) ---
-st.markdown("""
-<style>
     /* 1. Ẩn checkbox đi, chỉ dùng để lưu trạng thái logic */
     .lightbox-toggle { display: none; }
 
