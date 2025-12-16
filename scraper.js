@@ -1,5 +1,6 @@
-const gplay = require('google-play-scraper');
+import gplay from 'google-play-scraper';
 
+// Các tham số đầu vào
 const args = process.argv.slice(2);
 const mode = args[0];       // LIST, DETAIL, SEARCH...
 const target = args[1];     // Category ID, App ID...
@@ -8,7 +9,7 @@ const token = args[3];
 
 const lang = (country === 'vn') ? 'vi' : 'en';
 
-// Map thể loại từ chuỗi string sang Constant của thư viện
+// Map thể loại
 const CATEGORY_MAP = {
     "GAME_PUZZLE": gplay.category.GAME_PUZZLE,
     "GAME_ACTION": gplay.category.GAME_ACTION,
@@ -27,17 +28,13 @@ async function main() {
         let result;
 
         if (mode === 'LIST') {
-            // Lấy category chuẩn từ map, nếu không có thì để undefined (quét All)
             const cat = CATEGORY_MAP[target] || target;
-            
-            // Chạy song song 3 request: Free, Paid, Grossing
             const [free, paid, grossing] = await Promise.all([
                 gplay.list({ category: cat, collection: gplay.collection.TOP_FREE, lang: lang, country: country, num: 20 }),
                 gplay.list({ category: cat, collection: gplay.collection.TOP_PAID, lang: lang, country: country, num: 20 }),
                 gplay.list({ category: cat, collection: gplay.collection.TOP_GROSSING, lang: lang, country: country, num: 20 })
             ]);
 
-            // Gán nhãn
             free.forEach(i => i.collection_type = 'top_free');
             paid.forEach(i => i.collection_type = 'top_paid');
             grossing.forEach(i => i.collection_type = 'top_grossing');
@@ -69,7 +66,6 @@ async function main() {
         console.log(JSON.stringify(result));
 
     } catch (error) {
-        // In lỗi ra stderr để Python bắt được
         console.error(error);
         process.exit(1); 
     }

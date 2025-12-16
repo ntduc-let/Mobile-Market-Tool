@@ -15,34 +15,43 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 1. SETUP NODE ENVIRONMENT ---
+# --- 1. SETUP NODE ENVIRONMENT (FIXED FOR ES MODULE) ---
 def setup_node_env():
     current_dir = os.getcwd()
     node_modules = os.path.join(current_dir, "node_modules")
     lib_check = os.path.join(node_modules, "google-play-scraper")
     
-    # Set biến môi trường toàn cục cho session này
+    # Set biến môi trường
     os.environ["NODE_PATH"] = node_modules
 
+    # Tự động tạo package.json CHUẨN ES MODULE ("type": "module")
+    if not os.path.exists("package.json"):
+        st.toast("📝 Đang tạo cấu hình package.json...")
+        with open("package.json", "w") as f:
+            # THÊM "type": "module" ĐỂ FIX LỖI IMPORT
+            config = {
+                "type": "module", 
+                "dependencies": {"google-play-scraper": "^10.1.2"}
+            }
+            json.dump(config, f)
+
+    # Nếu chưa cài thư viện -> Cài đặt
     if not os.path.exists(lib_check):
         placeholder = st.empty()
         with placeholder.status("⚙️ Đang cài đặt thư viện Node.js...", expanded=True) as status:
             try:
-                if not os.path.exists("package.json"):
-                    with open("package.json", "w") as f:
-                        json.dump({"dependencies": {"google-play-scraper": "^10.0.0"}}, f)
-                
                 subprocess.run("npm install", shell=True, check=True, cwd=current_dir)
-                status.update(label="✅ Cài đặt xong! Reloading...", state="complete")
+                status.update(label="✅ Cài đặt xong! Đang tải lại...", state="complete")
                 time.sleep(1)
                 st.rerun()
             except Exception as e:
                 st.error(f"Lỗi cài đặt: {e}")
                 st.stop()
 
+# Gọi hàm setup
 setup_node_env()
 
-# --- 2. RUN NODE SCRAPER (DEBUG MODE) ---
+# --- 2. RUN NODE SCRAPER (GIỮ NGUYÊN) ---
 def run_node_scraper(mode, target, country, output_file, token=None):
     """Trả về (data, error_message)"""
     file_path = f"data/{output_file}"
@@ -58,7 +67,6 @@ def run_node_scraper(mode, target, country, output_file, token=None):
     env_vars["NODE_PATH"] = os.path.join(current_dir, "node_modules")
     
     try:
-        # Capture cả stdout và stderr
         result = subprocess.run(
             args,
             capture_output=True,
@@ -68,13 +76,11 @@ def run_node_scraper(mode, target, country, output_file, token=None):
         )
         
         if result.returncode != 0:
-            # Nếu Node trả về lỗi (exit code != 0)
             return None, result.stderr
             
-        # Parse JSON từ stdout
         json_str = result.stdout.strip()
         if not json_str: 
-            return None, "Node trả về dữ liệu rỗng (Empty response)."
+            return None, "Node trả về dữ liệu rỗng."
             
         data = json.loads(json_str)
         return data, None
