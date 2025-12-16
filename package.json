@@ -1,5 +1,12 @@
 {
+  "name": "mobile-market-tool",
+  "version": "1.0.0",
+  "description": "Scraper for Streamlit App",
+  "main": "scraper.js",
   "dependencies": {
     "google-play-scraper": "^10.1.2"
+  },
+  "scripts": {
+    "start": "node scraper.js"
   }
 }

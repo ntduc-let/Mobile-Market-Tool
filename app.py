@@ -11,103 +11,124 @@ import re
 import time
 import shutil
 
-# --- CẤU HÌNH TRANG ---
+# --- CẤU HÌNH ---
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 1. TỰ ĐỘNG CÀI ĐẶT & CẤU HÌNH NODE.JS (AUTO-FIX) ---
-def ensure_node_environment():
-    """Đảm bảo thư viện Google Play Scraper luôn sẵn sàng"""
+# --- 1. QUẢN LÝ MÔI TRƯỜNG NODE.JS (AUTO-SETUP) ---
+def setup_node_env():
+    """Đảm bảo node_modules tồn tại và chứa thư viện cần thiết"""
     current_dir = os.getcwd()
-    node_path = os.path.join(current_dir, "node_modules")
-    
-    # QUAN TRỌNG: Ép môi trường Python nhận diện đường dẫn Node
-    os.environ["NODE_PATH"] = node_path
-    
-    # Kiểm tra xem thư viện đã cài chưa
-    lib_check = os.path.join(node_path, "google-play-scraper")
+    node_modules = os.path.join(current_dir, "node_modules")
+    lib_check = os.path.join(node_modules, "google-play-scraper")
+
+    # Nếu chưa có thư viện, tiến hành cài đặt
     if not os.path.exists(lib_check):
         placeholder = st.empty()
-        with placeholder.status("⚙️ Đang khởi tạo môi trường lần đầu...", expanded=True) as status:
+        with placeholder.status("⚙️ Đang thiết lập môi trường Node.js (Lần đầu)...", expanded=True) as status:
             try:
-                # B1: Tạo package.json nếu thiếu
+                # Kiểm tra package.json
                 if not os.path.exists("package.json"):
-                    status.write("📝 Tạo cấu hình package.json...")
-                    with open("package.json", "w") as f:
-                        json.dump({"dependencies": {"google-play-scraper": "^10.1.2"}}, f)
-                
-                # B2: Cài đặt
-                status.write("⬇️ Đang cài đặt thư viện Scraper...")
+                    st.error("🚨 Thiếu file package.json! Vui lòng kiểm tra GitHub.")
+                    st.stop()
+
+                status.write("📦 Đang chạy `npm install`...")
+                # Chạy npm install
                 subprocess.run("npm install", shell=True, check=True, cwd=current_dir)
                 
-                status.update(label="✅ Cài đặt xong! Đang tải lại...", state="complete")
-                time.sleep(1)
-                st.rerun()
-            except Exception as e:
-                st.error(f"Lỗi cài đặt: {e}")
+                status.write("✅ Cài đặt xong! Kiểm tra lại...")
+                if os.path.exists(lib_check):
+                    status.update(label="Hoàn tất! App đang khởi động...", state="complete")
+                    time.sleep(1)
+                    st.rerun()
+                else:
+                    st.error("❌ Cài đặt thất bại. Thư mục node_modules vẫn trống.")
+                    st.stop()
+            except subprocess.CalledProcessError as e:
+                st.error(f"❌ Lỗi npm install: {e}")
                 st.stop()
 
-# Gọi hàm này đầu tiên để đảm bảo môi trường
-ensure_node_environment()
+# Gọi hàm setup ngay khi app chạy
+setup_node_env()
 
-# --- 2. HÀM CHẠY NODE.JS (ĐÃ FIX NODE_PATH) ---
-def run_node_safe(mode, target, country, output_file, token=None):
+# --- 2. HÀM GỌI NODE.JS (FIX PATH) ---
+def run_node_scraper(mode, target, country, output_file, token=None):
+    """Chạy script Node.js với biến môi trường NODE_PATH được set cứng"""
     file_path = f"data/{output_file}"
-    # Xóa file cũ
     if os.path.exists(file_path):
         try: os.remove(file_path)
         except: pass
     
+    # Chuẩn bị lệnh
+    args = ["node", NODE_SCRIPT, mode, target, country]
+    if token: args.append(token)
+    
+    # --- CHÌA KHÓA FIX LỖI: SET BIẾN MÔI TRƯỜNG NODE_PATH ---
+    # Ép Node.js phải tìm thư viện trong thư mục node_modules hiện tại
+    current_dir = os.getcwd()
+    env_vars = os.environ.copy()
+    env_vars["NODE_PATH"] = os.path.join(current_dir, "node_modules")
+    
     try:
-        args = ["node", NODE_SCRIPT, mode, target, country]
-        if token: args.append(token)
-        
-        # --- FIX QUAN TRỌNG: TRUYỀN BIẾN MÔI TRƯỜNG NODE_PATH ---
-        my_env = os.environ.copy()
-        my_env["NODE_PATH"] = os.path.join(os.getcwd(), "node_modules")
-        
-        # Chạy lệnh
-        subprocess.run(
-            args, 
-            capture_output=True, 
-            text=True, 
+        # Chạy lệnh Node và lấy kết quả trực tiếp từ stdout (thay vì file)
+        # Cách này nhanh hơn và đỡ lỗi file permission
+        result = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
             check=True,
-            cwd=os.getcwd(),
-            env=my_env  # <--- BẮT BUỘC PHẢI CÓ
+            cwd=current_dir,
+            env=env_vars # <--- QUAN TRỌNG
         )
-        time.sleep(0.5) # Chờ ghi file
         
+        # Node trả về JSON qua stdout, ta parse luôn
+        json_str = result.stdout.strip()
+        if not json_str: return None
+        
+        data = json.loads(json_str)
+        
+        # Lưu ra file (để tương thích logic cũ nếu cần, hoặc dùng data luôn)
+        # Ở đây ta trả về data luôn cho gọn
+        return data
+
     except subprocess.CalledProcessError as e:
-        print(f"Node Error: {e.stderr}") # Log lỗi ra console server
+        # In lỗi ra sidebar để debug nếu cần
+        # st.sidebar.error(f"Node Error: {e.stderr}")
+        print(f"Node Error: {e.stderr}")
         return None
-    except Exception:
+    except json.JSONDecodeError:
+        return None
+    except Exception as e:
         return None
 
-    # Đọc kết quả
-    if os.path.exists(file_path):
-        try:
-            with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
-        except: return None
-    return None
-
-def save_data_to_db(category_id, country_code):
-    if not os.path.exists("data/raw_data.json"): return False
-    with open("data/raw_data.json", 'r', encoding='utf-8') as f: data = json.load(f)
+# --- 3. DATABASE FUNCTIONS ---
+def save_chart_data(data, category_id, country_code):
+    if not data: return False
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('''CREATE TABLE IF NOT EXISTS app_history (
             scraped_at TIMESTAMP, category TEXT, country TEXT, collection_type TEXT,
             rank INT, app_id TEXT, title TEXT, developer TEXT, score REAL,
             installs TEXT, price REAL, currency TEXT, icon TEXT, reviews INT)''')
+    
     today = datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')
     cursor.execute("DELETE FROM app_history WHERE category=? AND country=? AND scraped_at>=?", (category_id, country_code, today))
+    
     clean = []
     ts = datetime.datetime.now()
-    for i in data:
-        clean.append((ts, i.get('category'), i.get('country'), i.get('collection_type'), i.get('rank'), i.get('appId'), i.get('title'), i.get('developer'), i.get('score', 0), i.get('installs', 'N/A'), i.get('price', 0), 'VND', i.get('icon', ''), 0))
+    for i, app in enumerate(data):
+        # Rank tính theo thứ tự trong list trả về
+        clean.append((
+            ts, category_id, country_code, app.get('collection_type', 'unknown'),
+            i + 1, app.get('appId'), app.get('title'), app.get('developer'),
+            app.get('score', 0), app.get('installs', 'N/A'), 
+            app.get('price', 0), 'VND', app.get('icon', ''), 0
+        ))
+        
     cursor.executemany('INSERT INTO app_history VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)', clean)
-    conn.commit(); conn.close()
+    conn.commit()
+    conn.close()
     return True
 
 def load_data_today(cat, country):
@@ -124,6 +145,49 @@ def load_app_history(app_id, country):
         df = pd.read_sql(f"SELECT scraped_at, rank, collection_type FROM app_history WHERE app_id='{app_id}' AND country='{country}' ORDER BY scraped_at ASC", conn)
         conn.close(); return df
     except: return pd.DataFrame()
+
+# --- HELPER UI ---
+def estimate_revenue(d, country):
+    if not d: return "N/A"
+    tier_multiplier = 1.0 
+    if country in ['us', 'jp', 'kr', 'uk', 'au', 'ca', 'de']: tier_multiplier = 5.0
+    is_game = "GAME" in str(d.get('genreId', '')).upper()
+    installs_str = re.sub(r'[^\d]', '', str(d.get('installs', '0')))
+    installs = int(installs_str) if installs_str else 0
+    mau = installs * 0.05
+    paying_users = mau * 0.02
+    arppu = 5.0 if not is_game else 15.0
+    arppu = arppu * tier_multiplier
+    est_revenue = paying_users * arppu
+    if est_revenue > 1000000: return f"${est_revenue/1000000:.1f}M / tháng"
+    elif est_revenue > 1000: return f"${est_revenue/1000:.1f}K / tháng"
+    else: return "< $1K / tháng"
+
+def render_mini_card(app, country, rank_idx, key_prefix):
+    icon_url = app.get('icon', '') or 'https://via.placeholder.com/72?text=App'
+    title = app.get('title', 'Unknown Title')
+    publisher = app.get('developer', 'Unknown Dev')
+    score = app.get('score', 0)
+    rank = rank_idx + 1
+    app_id_safe = app.get('appId') or f"unknown_{rank}"
+    unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
+    st.markdown(f"""
+    <div class="app-card-modern">
+        <div class="card-content-flex">
+            <div class="rank-number">#{rank}</div>
+            <img src="{icon_url}" class="app-icon-img">
+            <div class="app-info-box">
+                <div class="app-title-modern" title="{title}">{title}</div>
+                <div class="app-publisher-modern">{publisher}</div>
+                <div class="metric-score">⭐ {score:.1f}</div>
+            </div>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
+        st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
+        st.session_state.view_mode = 'detail'
+        st.rerun()
 
 # --- DANH SÁCH THỂ LOẠI (FULL CATEGORIES) ---
 CATEGORIES_LIST = {
@@ -295,53 +359,12 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# --- HELPER UI ---
-def estimate_revenue(d, country):
-    tier_multiplier = 1.0 
-    if country in ['us', 'jp', 'kr', 'uk', 'au', 'ca', 'de']: tier_multiplier = 5.0
-    is_game = "GAME" in d.get('genreId', '') or "GAME" in d.get('genre', '').upper()
-    installs_str = re.sub(r'[^\d]', '', str(d.get('installs', '0')))
-    installs = int(installs_str) if installs_str else 0
-    mau = installs * 0.05
-    paying_users = mau * 0.02
-    arppu = 5.0 if not is_game else 15.0
-    arppu = arppu * tier_multiplier
-    est_revenue = paying_users * arppu
-    if est_revenue > 1000000: return f"${est_revenue/1000000:.1f}M / tháng"
-    elif est_revenue > 1000: return f"${est_revenue/1000:.1f}K / tháng"
-    else: return "< $1K / tháng"
-
-def render_mini_card(app, country, rank_idx, key_prefix):
-    icon_url = app.get('icon', '') or 'https://via.placeholder.com/72?text=App'
-    title = app.get('title', 'Unknown Title')
-    publisher = app.get('developer', 'Unknown Dev')
-    score = app.get('score', 0)
-    rank = rank_idx + 1
-    app_id_safe = app.get('app_id') or app.get('appId') or f"unknown_{rank}"
-    unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
-    st.markdown(f"""
-    <div class="app-card-modern">
-        <div class="card-content-flex">
-            <div class="rank-number">#{rank}</div>
-            <img src="{icon_url}" class="app-icon-img">
-            <div class="app-info-box">
-                <div class="app-title-modern" title="{title}">{title}</div>
-                <div class="app-publisher-modern">{publisher}</div>
-                <div class="metric-score">⭐ {score:.1f}</div>
-            </div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-    if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
-        st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
-        st.session_state.view_mode = 'detail'
-        st.rerun()
-
-# --- SIDEBAR ---
+# --- SIDEBAR & MAIN LOGIC ---
 st.sidebar.title("🚀 Super Tool")
 st.sidebar.subheader("🔍 Tìm kiếm")
 search_term = st.sidebar.text_input("Nhập Từ khóa hoặc App ID:", placeholder="VD: com.facebook.katana")
 search_country_label = st.sidebar.selectbox("Quốc gia tìm kiếm", list(COUNTRIES_LIST.keys()), index=0)
+
 if st.sidebar.button("🔎 Tìm ngay"):
     if search_term:
         s_country = COUNTRIES_LIST[search_country_label]
@@ -351,7 +374,7 @@ if st.sidebar.button("🔎 Tìm ngay"):
             st.rerun()
         else:
             with st.spinner("Đang tìm kiếm..."):
-                res = run_node_safe("SEARCH", search_term, s_country, "search_results.json")
+                res = run_node_scraper("SEARCH", search_term, s_country, "search_results.json")
                 if res:
                     st.session_state.search_results = res
                     st.session_state.view_mode = 'search_results'
@@ -364,21 +387,18 @@ sel_country_lbl = st.sidebar.selectbox("Quốc Gia", list(COUNTRIES_LIST.keys())
 sel_cat_lbl = st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))
 target_country = COUNTRIES_LIST[sel_country_lbl]
 target_cat = CATEGORIES_LIST[sel_cat_lbl]
-if st.sidebar.button("🚀 Quét Chart", type="primary"):
-    with st.status("Đang quét..."):
-        try:
-            # Dùng subprocess với env đã set path
-            my_env = os.environ.copy()
-            my_env["NODE_PATH"] = os.path.join(os.getcwd(), "node_modules")
-            subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True, env=my_env, cwd=os.getcwd())
-            
-            if save_data_to_db(target_cat, target_country):
-                st.session_state.view_mode = 'list'
-                st.rerun()
-            else: st.error("Lỗi DB.")
-        except Exception as e: st.error(f"Lỗi quét chart: {e}")
 
-# --- MAIN VIEW ---
+if st.sidebar.button("🚀 Quét Chart", type="primary"):
+    with st.status("Đang quét Top Chart..."):
+        # Chạy scraper lấy list
+        data = run_node_scraper("LIST", target_cat, target_country, "chart_data.json")
+        if data:
+            save_chart_data(data, target_cat, target_country)
+            st.session_state.view_mode = 'list'
+            st.rerun()
+        else: st.error("Lỗi quét chart. Hãy kiểm tra lại file scraper.js")
+
+# --- VIEWS ---
 if st.session_state.view_mode == 'list':
     st.title(f"📊 Market: {sel_cat_lbl} ({sel_country_lbl})")
     df = load_data_today(target_cat, target_country)
@@ -417,20 +437,23 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             st.session_state.similar_apps = []
             st.session_state.dev_apps = []
             
-            d = run_node_safe("DETAIL", target_id, curr_country, "app_detail.json")
+            d = run_node_scraper("DETAIL", target_id, curr_country, "app_detail.json")
             if d:
                 st.session_state.detail_data = d
                 st.session_state.current_reviews = d.get('comments', [])
                 st.session_state.next_token = d.get('nextToken', None)
                 st.session_state.detail_id = target_id
                 st.session_state.detail_country = curr_country
-            
-            sims = run_node_safe("SIMILAR", target_id, curr_country, "similar_apps.json")
-            if sims: st.session_state.similar_apps = sims
-            dev_id = d.get('developerId') if d else None
-            if dev_id:
-                devs = run_node_safe("DEVELOPER", str(dev_id), curr_country, "developer_apps.json")
-                if devs: st.session_state.dev_apps = devs
+                
+                # Similar
+                sims = run_node_scraper("SIMILAR", target_id, curr_country, "similar.json")
+                if sims: st.session_state.similar_apps = sims
+                
+                # Developer
+                dev_id = d.get('developerId')
+                if dev_id:
+                    devs = run_node_scraper("DEVELOPER", str(dev_id), curr_country, "dev.json")
+                    if devs: st.session_state.dev_apps = devs
 
     d = st.session_state.detail_data
     if d:
@@ -449,7 +472,12 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             </div>
         </div>
         """, unsafe_allow_html=True)
-
+        
+        # ... (Phần render UI giữ nguyên như cũ, chỉ có điều data giờ lấy từ run_node_scraper)
+        # Để code gọn, tôi không paste lại đoạn UI dài, bạn giữ nguyên phần hiển thị bên dưới.
+        # Đảm bảo phần logic hiển thị (Tabs) nằm ở đây.
+        
+        # --- UI DISPLAY ---
         st.markdown(f"""
         <div class="metric-grid">
             <div class="metric-card-custom">
@@ -474,9 +502,9 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             </div>
         </div>
         """, unsafe_allow_html=True)
-
+        
         tab1, tab2, tab3, tab4, tab5 = st.tabs(["📉 Retention & Revenue", "📊 Reviews", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Thông tin"])
-
+        
         with tab1:
             est_rev = estimate_revenue(d, curr_country)
             st.markdown(f"""
@@ -492,7 +520,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 fig.update_yaxes(autorange="reversed")
                 st.plotly_chart(fig, use_container_width=True)
             else: st.info("Cần quét thêm dữ liệu để vẽ biểu đồ.")
-
+            
         with tab2:
             c_filter, c_hist = st.columns([2, 3])
             with c_filter:
@@ -514,7 +542,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 st.markdown(f"<div class='review-card-modern'><div class='review-header'><span class='review-user'>{r['userName']}</span><span>{r['date']}</span></div><div style='color: #ffbd45; margin-bottom: 8px;'>{star_str}</div><div class='review-text'>\"{r['text']}\"</div></div>", unsafe_allow_html=True)
             if st.session_state.next_token:
                 if st.button("⬇️ Tải thêm review"):
-                    more = run_node_safe("MORE_REVIEWS", d['appId'], curr_country, "more_reviews.json", st.session_state.next_token)
+                    more = run_node_scraper("MORE_REVIEWS", d['appId'], curr_country, "more.json", st.session_state.next_token)
                     if more:
                         st.session_state.current_reviews.extend(more.get('comments', []))
                         st.session_state.next_token = more.get('nextToken')
@@ -529,7 +557,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                     for i, s in enumerate(filtered_sims[:9]): render_mini_card(s, curr_country, i, "sim")
                 else: st.warning("Không có đối thủ khác.")
             else: st.info("Chưa tìm thấy dữ liệu.")
-
+            
         with tab4:
             devs = st.session_state.dev_apps
             if devs:
@@ -539,36 +567,6 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                     for i, dv in enumerate(filtered_devs[:9]): render_mini_card(dv, curr_country, i, "dev")
                 else: st.info("Dev này chỉ có 1 app này.")
             else: st.info("Chưa tìm thấy dữ liệu.")
-
+            
         with tab5:
-            c_tech, c_contact = st.columns(2)
-            with c_tech:
-                st.markdown("#### 📱 Kỹ thuật")
-                st.write(f"📅 **Released:** {d.get('released')}")
-                st.write(f"🔄 **Updated:** {d.get('updated')}")
-                st.write(f"🏷️ **Version:** {d.get('version')}")
-                st.write(f"💾 **Size:** {d.get('size')}")
-                st.write(f"🤖 **Android:** {d.get('androidVersion')}")
-                st.write(f"💰 **IAP:** {d.get('IAPRange')}")
-            with c_contact:
-                st.markdown("#### 📬 Liên hệ")
-                st.write(f"🆔 **Dev ID:** {d.get('developerId')}")
-                if d.get('developerEmail'): st.write(f"📧 **Email:** {d.get('developerEmail')}")
-                if d.get('developerWebsite'): st.write(f"🌐 **Website:** [Link]({d.get('developerWebsite')})")
-                if d.get('developerAddress'): st.write(f"🏢 **Address:** {d.get('developerAddress')}")
-                if d.get('privacyPolicy'): st.write(f"🔒 **Privacy Policy:** [Link]({d.get('privacyPolicy')})")
-            st.markdown("---")
-            st.markdown("#### 🛡️ Quyền truy cập")
-            perms = d.get('permissions', [])
-            if perms:
-                for p in perms:
-                    perm_text = p.get('permission') if isinstance(p, dict) else str(p)
-                    st.markdown(f"<span class='perm-tag'>{perm_text}</span>", unsafe_allow_html=True)
-            else: st.info("App này không yêu cầu quyền đặc biệt.")
-            st.markdown("---")
-            if d.get('recentChanges'):
-                st.markdown("#### 🆕 Có gì mới")
-                st.info(d.get('recentChanges'))
-            st.markdown("#### 📝 Mô tả")
-            with st.expander("Xem toàn bộ", expanded=True):
-                st.markdown(d.get('descriptionHTML', ''), unsafe_allow_html=True)
+            c_tech, c_contact = st
