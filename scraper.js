@@ -1,49 +1,59 @@
 const gplay = require('google-play-scraper');
 
-// Lấy tham số từ dòng lệnh (Python truyền vào)
 const args = process.argv.slice(2);
-const mode = args[0];       // DETAIL, LIST, SEARCH...
-const target = args[1];     // App ID, Category, Term...
+const mode = args[0];       // LIST, DETAIL, SEARCH...
+const target = args[1];     // Category ID, App ID...
 const country = args[2] || 'us';
-const token = args[3];      // Token cho trang tiếp theo (nếu có)
+const token = args[3];
 
 const lang = (country === 'vn') ? 'vi' : 'en';
+
+// Map thể loại từ chuỗi string sang Constant của thư viện
+const CATEGORY_MAP = {
+    "GAME_PUZZLE": gplay.category.GAME_PUZZLE,
+    "GAME_ACTION": gplay.category.GAME_ACTION,
+    "GAME_STRATEGY": gplay.category.GAME_STRATEGY,
+    "GAME_ROLE_PLAYING": gplay.category.GAME_ROLE_PLAYING,
+    "GAME_SIMULATION": gplay.category.GAME_SIMULATION,
+    "EDUCATION": gplay.category.EDUCATION,
+    "FINANCE": gplay.category.FINANCE,
+    "PRODUCTIVITY": gplay.category.PRODUCTIVITY,
+    "TOOLS": gplay.category.TOOLS,
+    "HEALTH_AND_FITNESS": gplay.category.HEALTH_AND_FITNESS
+};
 
 async function main() {
     try {
         let result;
-        
-        if (mode === 'DETAIL') {
-            result = await gplay.app({ appId: target, lang: lang, country: country });
-            // Lấy thêm review
-            const reviews = await gplay.reviews({ appId: target, lang: lang, country: country, sort: gplay.sort.NEWEST, num: 40 });
-            result.comments = reviews.data;
-            result.nextToken = reviews.nextPaginationToken;
-        } 
-        else if (mode === 'SEARCH') {
-            result = await gplay.search({ term: target, lang: lang, country: country, num: 20 });
-        }
-        else if (mode === 'LIST') {
-            // Map category string sang constant của thư viện nếu cần, hoặc dùng bộ sưu tập
-            // Ở đây dùng collection cơ bản
-            const collectionMap = {
-                'GAME_ACTION': gplay.category.GAME_ACTION,
-                // ... (Các category khác map tương tự, hoặc truyền trực tiếp nếu lib hỗ trợ)
-            };
+
+        if (mode === 'LIST') {
+            // Lấy category chuẩn từ map, nếu không có thì để undefined (quét All)
+            const cat = CATEGORY_MAP[target] || target;
             
-            // Chạy 3 luồng lấy Top Free, Paid, Grossing
+            // Chạy song song 3 request: Free, Paid, Grossing
             const [free, paid, grossing] = await Promise.all([
-                gplay.list({ category: target !== 'ALL' ? target : undefined, collection: gplay.collection.TOP_FREE, lang: lang, country: country, num: 20 }),
-                gplay.list({ category: target !== 'ALL' ? target : undefined, collection: gplay.collection.TOP_PAID, lang: lang, country: country, num: 20 }),
-                gplay.list({ category: target !== 'ALL' ? target : undefined, collection: gplay.collection.TOP_GROSSING, lang: lang, country: country, num: 20 })
+                gplay.list({ category: cat, collection: gplay.collection.TOP_FREE, lang: lang, country: country, num: 20 }),
+                gplay.list({ category: cat, collection: gplay.collection.TOP_PAID, lang: lang, country: country, num: 20 }),
+                gplay.list({ category: cat, collection: gplay.collection.TOP_GROSSING, lang: lang, country: country, num: 20 })
             ]);
-            
-            // Gán nhãn để Python xử lý
+
+            // Gán nhãn
             free.forEach(i => i.collection_type = 'top_free');
             paid.forEach(i => i.collection_type = 'top_paid');
             grossing.forEach(i => i.collection_type = 'top_grossing');
-            
+
             result = [...free, ...paid, ...grossing];
+        } 
+        else if (mode === 'DETAIL') {
+            result = await gplay.app({ appId: target, lang: lang, country: country });
+            try {
+                const reviews = await gplay.reviews({ appId: target, lang: lang, country: country, sort: gplay.sort.NEWEST, num: 40 });
+                result.comments = reviews.data;
+                result.nextToken = reviews.nextPaginationToken;
+            } catch (e) { result.comments = []; }
+        }
+        else if (mode === 'SEARCH') {
+            result = await gplay.search({ term: target, lang: lang, country: country, num: 20 });
         }
         else if (mode === 'SIMILAR') {
             result = await gplay.similar({ appId: target, lang: lang, country: country, num: 20 });
@@ -52,21 +62,16 @@ async function main() {
             result = await gplay.developer({ devId: target, lang: lang, country: country, num: 20 });
         }
         else if (mode === 'MORE_REVIEWS') {
-            const reviews = await gplay.reviews({ 
-                appId: target, 
-                lang: lang, 
-                country: country, 
-                sort: gplay.sort.NEWEST, 
-                num: 40, 
-                nextPaginationToken: token 
-            });
+            const reviews = await gplay.reviews({ appId: target, lang: lang, country: country, sort: gplay.sort.NEWEST, num: 40, nextPaginationToken: token });
             result = { comments: reviews.data, nextToken: reviews.nextPaginationToken };
         }
 
-        console.log(JSON.stringify(result)); // Trả kết quả về cho Python qua Stdout
+        console.log(JSON.stringify(result));
+
     } catch (error) {
-        console.error("SCRAPER ERROR:", error);
-        process.exit(1);
+        // In lỗi ra stderr để Python bắt được
+        console.error(error);
+        process.exit(1); 
     }
 }
 
