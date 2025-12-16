@@ -1,6 +1,5 @@
-import gplay from 'google-play-scraper';
+const gplay = require('google-play-scraper');
 
-// Các tham số đầu vào
 const args = process.argv.slice(2);
 const mode = args[0];       // LIST, DETAIL, SEARCH...
 const target = args[1];     // Category ID, App ID...
