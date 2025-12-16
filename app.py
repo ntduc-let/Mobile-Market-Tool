@@ -20,32 +20,30 @@ NODE_SCRIPT = 'scraper.js'
 # --- KHU VỰC QUẢN LÝ HỆ THỐNG (SIDEBAR) ---
 st.sidebar.title("🔧 System Admin")
 
-# NÚT BẤM CỨU HỘ: Dùng để xóa sạch thư viện lỗi và cài lại
-if st.sidebar.button("🔥 HARD RESET (Cài lại Node.js)", type="primary"):
-    status = st.sidebar.empty()
-    status.info("🧹 Đang xóa thư viện cũ...")
+if not os.path.exists("v8_installed.lock"):
+    st.toast("⚠️ Đang hạ cấp hệ thống về Version 8.0.0...", icon="🛠️")
     
-    # 1. Xóa folder node_modules
-    if os.path.exists('node_modules'):
-        try: shutil.rmtree('node_modules')
-        except Exception as e: st.sidebar.error(f"Lỗi xóa node_modules: {e}")
-            
-    # 2. Xóa file lock của npm
-    if os.path.exists('package-lock.json'):
-        try: os.remove('package-lock.json')
-        except Exception as e: st.sidebar.error(f"Lỗi xóa package-lock: {e}")
+    # 1. Xóa sạch thư mục node_modules cũ
+    if os.path.exists("node_modules"):
+        shutil.rmtree("node_modules", ignore_errors=True)
+    
+    # 2. Xóa package-lock cũ
+    if os.path.exists("package-lock.json"):
+        os.remove("package-lock.json")
 
-    status.info("⏳ Đang chạy npm install (v9.1.0)...")
+    # 3. Cài đặt lại
     try:
-        # 3. Cài lại mới tinh
-        result = subprocess.run(['npm', 'install'], capture_output=True, text=True, check=True)
-        status.success("✅ Cài đặt thành công! App sẽ tự reload sau 2s.")
-        st.toast("Cài đặt thành công!", icon="✅")
+        subprocess.run(["npm", "install"], check=True)
+        # Tạo file lock để lần sau không phải cài lại
+        with open("v8_installed.lock", "w") as f:
+            f.write("done")
+        st.toast("✅ Đã hạ cấp thành công! App đang reload...", icon="🎉")
         time.sleep(2)
         st.rerun()
-    except subprocess.CalledProcessError as e:
-        status.error("❌ Lỗi cài đặt!")
-        st.sidebar.code(e.stderr)
+    except Exception as e:
+        st.error(f"Lỗi cài đặt: {e}")
+        st.stop()
+# --------------------
 
 # Tự động cài lần đầu nếu chưa có folder node_modules (phòng hờ)
 if not os.path.exists('node_modules'):

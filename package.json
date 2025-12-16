@@ -1,6 +1,6 @@
 {
   "dependencies": {
-    "google-play-scraper": "9.1.0"
+    "google-play-scraper": "8.0.0"
   },
   "engines": {
     "node": "18.x"
