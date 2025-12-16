@@ -9,10 +9,40 @@ import plotly.graph_objects as go
 import plotly.express as px
 import re
 import time
+import shutil
 
+# --- CẤU HÌNH TRANG (PHẢI ĐỂ ĐẦU TIÊN) ---
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
+
+# --- HẰNG SỐ ---
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
+
+# --- [DEPLOY FIX] HÀM KIỂM TRA MÔI TRƯỜNG ---
+def init_environment():
+    """Kiểm tra và cài đặt môi trường cần thiết cho Streamlit Cloud"""
+    
+    # 1. Tạo thư mục data nếu chưa có
+    if not os.path.exists('data'):
+        os.makedirs('data')
+
+    # 2. Cài đặt node_modules nếu chưa có (Quan trọng khi deploy)
+    if not os.path.exists('node_modules'):
+        st.toast("⚙️ Đang cài đặt thư viện Node.js lần đầu...", icon="⏳")
+        try:
+            # Kiểm tra xem npm có tồn tại không
+            if shutil.which('npm') is None:
+                st.error("❌ Lỗi: Không tìm thấy 'npm'. Hãy chắc chắn bạn đã thêm 'nodejs' và 'npm' vào file packages.txt")
+                st.stop()
+                
+            subprocess.run(['npm', 'install'], check=True)
+            st.toast("✅ Cài đặt Node.js thành công!", icon="🎉")
+        except subprocess.CalledProcessError as e:
+            st.error(f"❌ Lỗi khi chạy npm install: {e}")
+            st.stop()
+
+# Chạy khởi tạo ngay khi load app
+init_environment()
 
 # --- DANH SÁCH THỂ LOẠI (FULL CATEGORIES) ---
 CATEGORIES_LIST = {
@@ -144,7 +174,7 @@ if 'search_results' not in st.session_state: st.session_state.search_results = [
 
 # Detail States
 if 'detail_id' not in st.session_state: st.session_state.detail_id = None
-if 'detail_country' not in st.session_state: st.session_state.detail_country = None # <--- BIẾN MỚI ĐỂ CHECK QUỐC GIA
+if 'detail_country' not in st.session_state: st.session_state.detail_country = None
 if 'detail_data' not in st.session_state: st.session_state.detail_data = None
 if 'current_reviews' not in st.session_state: st.session_state.current_reviews = []
 if 'next_token' not in st.session_state: st.session_state.next_token = None
@@ -216,15 +246,25 @@ st.markdown("""
 # --- BACKEND FUNCTIONS ---
 def run_node_safe(mode, target, country, output_file, token=None):
     file_path = f"data/{output_file}"
+    # Xóa file cũ để tránh đọc data rác
     if os.path.exists(file_path):
         try: os.remove(file_path)
         except: pass
+        
     try:
         args = ["node", NODE_SCRIPT, mode, target, country]
         if token: args.append(token)
+        # Check=True để bắt lỗi nếu Node script fail
         subprocess.run(args, capture_output=True, text=True, check=True)
         time.sleep(0.5)
-    except Exception as e: return None
+    except subprocess.CalledProcessError as e:
+        # Nếu lỗi thì in ra log để debug (chỉ hiện trong logs server)
+        print(f"Node Error: {e.stderr}")
+        return None
+    except Exception as e:
+        print(f"System Error: {e}")
+        return None
+
     if os.path.exists(file_path):
         try:
             with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
@@ -241,6 +281,7 @@ def save_data_to_db(category_id, country_code):
             rank INT, app_id TEXT, title TEXT, developer TEXT, score REAL,
             installs TEXT, price REAL, currency TEXT, icon TEXT, reviews INT)''')
     today = datetime.datetime.now().strftime('%Y-%m-%d 00:00:00')
+    # Xóa data cũ của ngày hôm nay để tránh duplicate khi quét lại
     cursor.execute("DELETE FROM app_history WHERE category=? AND country=? AND scraped_at>=?", (category_id, country_code, today))
     clean = []
     ts = datetime.datetime.now()
@@ -251,6 +292,7 @@ def save_data_to_db(category_id, country_code):
     return True
 
 def load_data_today(cat, country):
+    if not os.path.exists(DB_PATH): return pd.DataFrame()
     conn = sqlite3.connect(DB_PATH)
     try:
         today = datetime.datetime.now().strftime('%Y-%m-%d')
@@ -259,6 +301,7 @@ def load_data_today(cat, country):
     except: conn.close(); return pd.DataFrame()
 
 def load_app_history(app_id, country):
+    if not os.path.exists(DB_PATH): return pd.DataFrame()
     conn = sqlite3.connect(DB_PATH)
     try:
         df = pd.read_sql(f"SELECT scraped_at, rank, collection_type FROM app_history WHERE app_id='{app_id}' AND country='{country}' ORDER BY scraped_at ASC", conn)
@@ -313,7 +356,7 @@ if st.sidebar.button("🔎 Tìm ngay"):
                     st.session_state.search_results = res
                     st.session_state.view_mode = 'search_results'
                     st.rerun()
-                else: st.error("Lỗi tìm kiếm (Backend Error).")
+                else: st.error("Lỗi tìm kiếm hoặc không có kết quả.")
 
 st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Top Charts")
@@ -321,8 +364,10 @@ sel_country_lbl = st.sidebar.selectbox("Quốc Gia", list(COUNTRIES_LIST.keys())
 sel_cat_lbl = st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))
 target_country = COUNTRIES_LIST[sel_country_lbl]
 target_cat = CATEGORIES_LIST[sel_cat_lbl]
+
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
-    with st.status("Đang quét..."):
+    with st.status("Đang xử lý...", expanded=True) as status:
+        st.write("📡 Đang khởi chạy Node.js scraper...")
         try:
             # Thêm capture_output=True để bắt lấy nội dung lỗi từ Node.js
             result = subprocess.run(
@@ -331,19 +376,24 @@ if st.sidebar.button("🚀 Quét Chart", type="primary"):
                 text=True, 
                 capture_output=True
             )
+            st.write("💾 Đang lưu dữ liệu vào Database...")
             
             if save_data_to_db(target_cat, target_country):
+                status.update(label="✅ Quét thành công!", state="complete", expanded=False)
                 st.session_state.view_mode = 'list'
                 st.rerun()
             else: 
+                status.update(label="⚠️ Lỗi Database", state="error")
                 st.error("Không lưu được vào Database.")
                 
         except subprocess.CalledProcessError as e:
-            # IN RA LỖI THỰC SỰ
-            st.error(f"❌ Lỗi chạy Node.js (Exit Code {e.returncode})")
-            st.code(e.stderr, language="bash") # Hiển thị thông báo lỗi từ Terminal lên Web
+            status.update(label="❌ Lỗi Scraper", state="error")
+            st.error(f"Lỗi chạy Node.js (Exit Code {e.returncode})")
+            with st.expander("Xem chi tiết lỗi"):
+                st.code(e.stderr, language="bash")
         except Exception as ex:
-            st.error(f"❌ Lỗi không xác định: {str(ex)}")
+            status.update(label="❌ Lỗi Hệ Thống", state="error")
+            st.error(f"Lỗi không xác định: {str(ex)}")
 
 # --- MAIN VIEW ---
 
@@ -362,12 +412,12 @@ if st.session_state.view_mode == 'list':
         with c3: 
             st.subheader("💰 Grossing")
             for i, (_, r) in enumerate(df[df['collection_type']=='top_grossing'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tg")
-    else: st.info("👋 Chưa có data. Hãy bấm Quét Chart.")
+    else: st.info("👋 Chưa có data cho ngày hôm nay. Hãy bấm '🚀 Quét Chart' bên trái.")
 
 # 2. SEARCH RESULTS
 elif st.session_state.view_mode == 'search_results':
     st.button("⬅️ Quay lại", on_click=lambda: st.session_state.update(view_mode='list'))
-    st.title("🔎 Kết quả tìm kiếm")
+    st.title(f"🔎 Kết quả tìm kiếm: '{search_term}'")
     results = st.session_state.search_results
     if results:
         cols = st.columns(3)
@@ -375,7 +425,7 @@ elif st.session_state.view_mode == 'search_results':
             with cols[i % 3]: render_mini_card(app, COUNTRIES_LIST[search_country_label], i, "sr")
     else: st.warning("Không tìm thấy kết quả nào.")
 
-# 3. DETAIL VIEW (FIX LỖI ĐỔI COUNTRY)
+# 3. DETAIL VIEW
 elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
     app = st.session_state.selected_app
     curr_country = app.get('country_override', target_country)
@@ -384,7 +434,6 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
     st.button("⬅️ Quay lại danh sách", on_click=lambda: st.session_state.update(view_mode='list'), use_container_width=False)
 
     # --- LOGIC TẢI DATA ---
-    # Fix: Kiểm tra cả ID lẫn COUNTRY. Nếu 1 trong 2 khác thì tải lại.
     if st.session_state.detail_id != target_id or st.session_state.detail_country != curr_country:
         with st.spinner(f"Đang phân tích {target_id} ({curr_country})..."):
             st.session_state.detail_data = None
@@ -397,7 +446,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                 st.session_state.current_reviews = d.get('comments', [])
                 st.session_state.next_token = d.get('nextToken', None)
                 st.session_state.detail_id = target_id
-                st.session_state.detail_country = curr_country # <--- CẬP NHẬT QUỐC GIA HIỆN TẠI
+                st.session_state.detail_country = curr_country
             
             sims = run_node_safe("SIMILAR", target_id, curr_country, "similar_apps.json")
             if sims: st.session_state.similar_apps = sims
@@ -560,3 +609,5 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             st.markdown("#### 📝 Mô tả")
             with st.expander("Xem toàn bộ", expanded=True):
                 st.markdown(d.get('descriptionHTML', ''), unsafe_allow_html=True)
+    else:
+        st.error("❌ Không lấy được dữ liệu chi tiết. Vui lòng thử lại sau.")
