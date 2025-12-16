@@ -15,45 +15,74 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 1. SETUP NODE ENVIRONMENT (FIXED FOR ES MODULE) ---
+# --- 1. SETUP NODE ENVIRONMENT (FIXED: FORCE UPDATE CONFIG) ---
 def setup_node_env():
     current_dir = os.getcwd()
     node_modules = os.path.join(current_dir, "node_modules")
     lib_check = os.path.join(node_modules, "google-play-scraper")
     
-    # Set biến môi trường
+    # 1. Set biến môi trường
     os.environ["NODE_PATH"] = node_modules
 
-    # Tự động tạo package.json CHUẨN ES MODULE ("type": "module")
-    if not os.path.exists("package.json"):
-        st.toast("📝 Đang tạo cấu hình package.json...")
+    # 2. BẮT BUỘC TẠO LẠI package.json ĐÚNG CHUẨN (GHI ĐÈ LUÔN)
+    # Nội dung cấu hình bắt buộc phải có "type": "module"
+    pkg_config = {
+        "name": "market-tool",
+        "version": "1.0.0",
+        "type": "module",  # <--- DÒNG QUAN TRỌNG NHẤT
+        "dependencies": {
+            "google-play-scraper": "^10.1.2"
+        }
+    }
+    
+    # Kiểm tra xem file hiện tại có đúng không, nếu sai thì ghi đè
+    need_install = False
+    try:
+        if os.path.exists("package.json"):
+            with open("package.json", "r") as f:
+                current_pkg = json.load(f)
+                # Nếu thiếu dòng type: module thì phải làm lại
+                if current_pkg.get("type") != "module":
+                    st.toast("⚠️ Phát hiện cấu hình cũ. Đang cập nhật...")
+                    with open("package.json", "w") as f:
+                        json.dump(pkg_config, f, indent=2)
+                    need_install = True
+        else:
+            # Chưa có file -> Tạo mới
+            with open("package.json", "w") as f:
+                json.dump(pkg_config, f, indent=2)
+            need_install = True
+            
+    except Exception:
+        # File lỗi -> Ghi đè luôn cho chắc
         with open("package.json", "w") as f:
-            # THÊM "type": "module" ĐỂ FIX LỖI IMPORT
-            config = {
-                "type": "module", 
-                "dependencies": {"google-play-scraper": "^10.1.2"}
-            }
-            json.dump(config, f)
+            json.dump(pkg_config, f, indent=2)
+        need_install = True
 
-    # Nếu chưa cài thư viện -> Cài đặt
-    if not os.path.exists(lib_check):
+    # 3. Cài đặt thư viện nếu cần hoặc thiếu
+    if need_install or not os.path.exists(lib_check):
         placeholder = st.empty()
-        with placeholder.status("⚙️ Đang cài đặt thư viện Node.js...", expanded=True) as status:
+        with placeholder.status("⚙️ Đang cập nhật hệ thống Node.js...", expanded=True) as status:
             try:
+                # Xóa node_modules cũ nếu config thay đổi để tránh xung đột
+                if need_install and os.path.exists(node_modules):
+                    shutil.rmtree(node_modules, ignore_errors=True)
+                
+                status.write("⬇️ Đang chạy npm install...")
                 subprocess.run("npm install", shell=True, check=True, cwd=current_dir)
-                status.update(label="✅ Cài đặt xong! Đang tải lại...", state="complete")
+                
+                status.update(label="✅ Hoàn tất! Đang khởi động lại...", state="complete")
                 time.sleep(1)
                 st.rerun()
             except Exception as e:
                 st.error(f"Lỗi cài đặt: {e}")
                 st.stop()
 
-# Gọi hàm setup
+# Gọi hàm setup ngay đầu tiên
 setup_node_env()
 
-# --- 2. RUN NODE SCRAPER (GIỮ NGUYÊN) ---
+# --- 2. RUN NODE SCRAPER ---
 def run_node_scraper(mode, target, country, output_file, token=None):
-    """Trả về (data, error_message)"""
     file_path = f"data/{output_file}"
     if os.path.exists(file_path):
         try: os.remove(file_path)
@@ -166,128 +195,20 @@ def render_mini_card(app, country, rank_idx, key_prefix):
         st.session_state.view_mode = 'detail'
         st.rerun()
 
-# --- DANH SÁCH THỂ LOẠI (FULL CATEGORIES) ---
+# --- CONFIG ---
 CATEGORIES_LIST = {
-    # ================= GAMES (TRÒ CHƠI) =================
-    "🎮 Game: Hành động (Action)": "GAME_ACTION",
-    "🎮 Game: Phiêu lưu (Adventure)": "GAME_ADVENTURE",
-    "🎮 Game: Giải trí (Arcade)": "GAME_ARCADE",
-    "🎮 Game: Dạng bảng (Board)": "GAME_BOARD",
-    "🎮 Game: Bài (Card)": "GAME_CARD",
-    "🎮 Game: Sòng bạc (Casino)": "GAME_CASINO",
-    "🎮 Game: Phổ thông (Casual)": "GAME_CASUAL",
-    "🎮 Game: Giáo dục (Educational)": "GAME_EDUCATIONAL",
-    "🎮 Game: Nhạc (Music)": "GAME_MUSIC",
     "🎮 Game: Giải đố (Puzzle)": "GAME_PUZZLE",
-    "🎮 Game: Đua xe (Racing)": "GAME_RACING",
-    "🎮 Game: Nhập vai (Role Playing)": "GAME_ROLE_PLAYING",
-    "🎮 Game: Mô phỏng (Simulation)": "GAME_SIMULATION",
-    "🎮 Game: Thể thao (Sports)": "GAME_SPORTS",
+    "🎮 Game: Hành động (Action)": "GAME_ACTION",
     "🎮 Game: Chiến thuật (Strategy)": "GAME_STRATEGY",
-    "🎮 Game: Đố vui (Trivia)": "GAME_TRIVIA",
-    "🎮 Game: Từ vựng (Word)": "GAME_WORD",
-
-    # ================= APPS (ỨNG DỤNG) =================
-    "🎨 Nghệ thuật & Thiết kế (Art & Design)": "ART_AND_DESIGN",
-    "🚗 Ô tô & Xe cộ (Auto & Vehicles)": "AUTO_AND_VEHICLES",
-    "💄 Làm đẹp (Beauty)": "BEAUTY",
-    "📚 Sách & Tài liệu (Books & Reference)": "BOOKS_AND_REFERENCE",
-    "💼 Kinh doanh (Business)": "BUSINESS",
-    "💬 Truyện tranh (Comics)": "COMICS",
-    "🗣️ Liên lạc (Communication)": "COMMUNICATION",
-    "💕 Hẹn hò (Dating)": "DATING",
+    "🎮 Game: Nhập vai (RPG)": "GAME_ROLE_PLAYING",
+    "🎮 Game: Mô phỏng (Simulation)": "GAME_SIMULATION",
     "🎓 Giáo dục (Education)": "EDUCATION",
-    "🎬 Giải trí (Entertainment)": "ENTERTAINMENT",
-    "🎉 Sự kiện (Events)": "EVENTS",
     "💰 Tài chính (Finance)": "FINANCE",
-    "🍔 Ăn uống (Food & Drink)": "FOOD_AND_DRINK",
-    "💪 Sức khỏe (Health & Fitness)": "HEALTH_AND_FITNESS",
-    "🏠 Nhà cửa (House & Home)": "HOUSE_AND_HOME",
-    "📖 Thư viện & Demo (Libraries & Demo)": "LIBRARIES_AND_DEMO",
-    "✨ Phong cách sống (Lifestyle)": "LIFESTYLE",
-    "📍 Bản đồ & Dẫn đường (Maps & Navigation)": "MAPS_AND_NAVIGATION",
-    "🏥 Y tế (Medical)": "MEDICAL",
-    "🎵 Nhạc & Âm thanh (Music & Audio)": "MUSIC_AND_AUDIO",
-    "📰 Tin tức & Tạp chí (News & Magazines)": "NEWS_AND_MAGAZINES",
-    "👶 Làm cha mẹ (Parenting)": "PARENTING",
-    "🎨 Cá nhân hóa (Personalization)": "PERSONALIZATION",
-    "📸 Nhiếp ảnh (Photography)": "PHOTOGRAPHY",
     "✅ Năng suất (Productivity)": "PRODUCTIVITY",
-    "🛍️ Mua sắm (Shopping)": "SHOPPING",
-    "🌐 Mạng xã hội (Social)": "SOCIAL",
-    "⚽ Thể thao (Sports App)": "SPORTS",
     "🛠 Công cụ (Tools)": "TOOLS",
-    "✈️ Du lịch & Địa phương (Travel & Local)": "TRAVEL_AND_LOCAL",
-    "▶️ Xem và sửa Video (Video Players)": "VIDEO_PLAYERS",
-    "⛅ Thời tiết (Weather)": "WEATHER"
+    "🏥 Sức khỏe (Health & Fitness)": "HEALTH_AND_FITNESS"
 }
-
-# --- DANH SÁCH QUỐC GIA (FULL LIST) ---
-COUNTRIES_LIST = {
-    # --- CHÂU Á (ASIA) ---
-    "🇻🇳 Việt Nam (VN)": "vn",
-    "🇯🇵 Nhật Bản (Japan)": "jp",
-    "🇰🇷 Hàn Quốc (Korea)": "kr",
-    "🇨🇳 Trung Quốc (China - Limited)": "cn",
-    "🇹🇼 Đài Loan (Taiwan)": "tw",
-    "🇭🇰 Hồng Kông (Hong Kong)": "hk",
-    "🇸🇬 Singapore": "sg",
-    "🇹🇭 Thái Lan (Thailand)": "th",
-    "🇮🇩 Indonesia": "id",
-    "🇵🇭 Philippines": "ph",
-    "🇲🇾 Malaysia": "my",
-    "🇮🇳 Ấn Độ (India)": "in",
-    "🇵🇰 Pakistan": "pk",
-    "🇧🇩 Bangladesh": "bd",
-    
-    # --- BẮC MỸ (NORTH AMERICA) ---
-    "🇺🇸 Hoa Kỳ (USA)": "us",
-    "🇨🇦 Canada": "ca",
-    
-    # --- CHÂU ÂU (EUROPE) ---
-    "🇬🇧 Anh Quốc (United Kingdom)": "gb",
-    "🇩🇪 Đức (Germany)": "de",
-    "🇫🇷 Pháp (France)": "fr",
-    "🇮🇹 Ý (Italy)": "it",
-    "🇪🇸 Tây Ban Nha (Spain)": "es",
-    "🇷🇺 Nga (Russia)": "ru",
-    "🇳🇱 Hà Lan (Netherlands)": "nl",
-    "🇸🇪 Thụy Điển (Sweden)": "se",
-    "🇨🇭 Thụy Sĩ (Switzerland)": "ch",
-    "🇳🇴 Na Uy (Norway)": "no",
-    "🇩🇰 Đan Mạch (Denmark)": "dk",
-    "🇫🇮 Phần Lan (Finland)": "fi",
-    "🇵🇱 Ba Lan (Poland)": "pl",
-    "🇺🇦 Ukraine": "ua",
-    "🇹🇷 Thổ Nhĩ Kỳ (Turkey)": "tr",
-    "🇵🇹 Bồ Đào Nha (Portugal)": "pt",
-    "🇷🇴 Romania": "ro",
-    "🇨🇿 Cộng hòa Séc (Czechia)": "cz",
-    "🇭🇺 Hungary": "hu",
-    "🇧🇪 Bỉ (Belgium)": "be",
-    "🇦🇹 Áo (Austria)": "at",
-    "🇮🇪 Ireland": "ie",
-    
-    # --- CHÂU ĐẠI DƯƠNG (OCEANIA) ---
-    "🇦🇺 Úc (Australia)": "au",
-    "🇳🇿 New Zealand": "nz",
-    
-    # --- MỸ LATINH (LATAM) ---
-    "🇧🇷 Brazil": "br",
-    "🇲🇽 Mexico": "mx",
-    "🇦🇷 Argentina": "ar",
-    "🇨🇱 Chile": "cl",
-    "🇨🇴 Colombia": "co",
-    "🇵🇪 Peru": "pe",
-    
-    # --- TRUNG ĐÔNG & CHÂU PHI (MENA) ---
-    "🇸🇦 Ả Rập Xê Út (Saudi Arabia)": "sa",
-    "🇦🇪 UAE (Các Tiểu vương quốc Ả Rập)": "ae",
-    "🇮🇱 Israel": "il",
-    "🇪🇬 Ai Cập (Egypt)": "eg",
-    "🇿🇦 Nam Phi (South Africa)": "za",
-    "🇳🇬 Nigeria": "ng"
-}
+COUNTRIES_LIST = { "🇻🇳 Việt Nam": "vn", "🇺🇸 Hoa Kỳ": "us", "🇯🇵 Nhật Bản": "jp", "🇰🇷 Hàn Quốc": "kr", "🇨🇳 Trung Quốc": "cn" }
 
 # --- STATE ---
 if 'view_mode' not in st.session_state: st.session_state.view_mode = 'list'
@@ -349,12 +270,10 @@ target_cat = CATEGORIES_LIST[sel_cat_lbl]
 
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
     with st.status("Đang quét Top Chart..."):
-        # Gọi scraper và lấy cả data lẫn error
         data, err = run_node_scraper("LIST", target_cat, target_country, "chart.json")
-        
         if err:
             st.error("❌ Lỗi khi chạy Scraper!")
-            st.code(err, language="text") # In nguyên văn lỗi Node.js ra
+            st.code(err, language="text")
         elif data:
             if save_chart_data(data, target_cat, target_country):
                 st.success("Xong!")
@@ -363,7 +282,7 @@ if st.sidebar.button("🚀 Quét Chart", type="primary"):
             else:
                 st.error("Lỗi lưu Database.")
         else:
-            st.warning("Không có dữ liệu trả về (Danh sách rỗng).")
+            st.warning("Không có dữ liệu trả về.")
 
 # --- MAIN VIEWS ---
 if st.session_state.view_mode == 'list':
@@ -420,9 +339,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
 
     d = st.session_state.detail_data
     if d:
-        # Render Detail UI (Simplified for brevity, similar to before)
         st.markdown(f"""<div class="hero-header"><img src="{d.get('icon')}" class="hero-icon-big"><div><h1 style='color:white;margin:0'>{d.get('title')}</h1><p style='color:#ccc'>{d.get('developer')}</p></div></div>""", unsafe_allow_html=True)
-        
         col_m = st.columns(4)
         col_m[0].metric("Score", f"{d.get('score', 0):.1f} ⭐")
         col_m[1].metric("Reviews", f"{d.get('ratings', 0):,}")
