@@ -10,19 +10,35 @@ import plotly.express as px
 import re
 import time
 
-# --- TỰ ĐỘNG CÀI NODE MODULES TRÊN CLOUD ---
+# --- TỰ ĐỘNG CÀI NODE MODULES (PHIÊN BẢN FIX MẠNH MẼ) ---
 def install_node_dependencies():
-    """Kiểm tra và cài đặt thư viện Node.js nếu chưa có"""
-    if not os.path.exists("node_modules"):
-        with st.spinner("Đang cài đặt môi trường Node.js (Lần đầu chạy sẽ hơi lâu)..."):
-            try:
-                # Chạy lệnh npm install
-                subprocess.run(["npm", "install"], check=True)
-                st.success("✅ Đã cài xong Node modules!")
-            except Exception as e:
-                st.error(f"Lỗi cài đặt Node.js: {e}")
+    """Kiểm tra và cài đặt thư viện Node.js nếu thiếu"""
+    # 1. Kiểm tra xem file package.json có tồn tại không (Quan trọng!)
+    if not os.path.exists("package.json"):
+        st.error("🚨 LỖI NGHIÊM TRỌNG: Không tìm thấy file 'package.json'.")
+        st.warning("👉 Bạn hãy kiểm tra lại GitHub xem đã có file 'package.json' chưa.")
+        st.stop() # Dừng app ngay lập tức
 
-# Gọi hàm này ngay khi app chạy
+    # 2. Kiểm tra xem thư viện google-play-scraper đã nằm trong node_modules chưa
+    # (Thay vì chỉ check folder node_modules chung chung)
+    lib_path = os.path.join("node_modules", "google-play-scraper")
+    
+    if not os.path.exists(lib_path):
+        with st.status("⚙️ Đang cài đặt thư viện Google Play Scraper...", expanded=True) as status:
+            st.write("Đang chạy lệnh: `npm install`...")
+            try:
+                # Chạy npm install và bắt lấy kết quả
+                result = subprocess.run(["npm", "install"], capture_output=True, text=True, check=True)
+                st.code(result.stdout) # In log ra để xem
+                status.update(label="✅ Cài đặt thành công!", state="complete")
+                time.sleep(1) # Chờ 1 giây cho hệ thống ổn định
+            except subprocess.CalledProcessError as e:
+                status.update(label="❌ Cài đặt thất bại", state="error")
+                st.error("Lỗi khi chạy npm install:")
+                st.code(e.stderr)
+                st.stop()
+
+# Gọi hàm này ngay đầu chương trình
 install_node_dependencies()
 
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
