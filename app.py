@@ -18,27 +18,40 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- [DEPLOY FIX] HÀM KIỂM TRA MÔI TRƯỜNG ---
+# --- HÀM KIỂM TRA MÔI TRƯỜNG ---
 def init_environment():
     """Kiểm tra và cài đặt môi trường cần thiết cho Streamlit Cloud"""
     
-    # 1. Tạo thư mục data nếu chưa có
+    # 1. Tạo thư mục data
     if not os.path.exists('data'):
         os.makedirs('data')
 
-    # 2. Cài đặt node_modules nếu chưa có (Quan trọng khi deploy)
-    if not os.path.exists('node_modules'):
-        st.toast("⚙️ Đang cài đặt thư viện Node.js lần đầu...", icon="⏳")
+    # 2. Kiểm tra sự tồn tại của thư viện CHÍNH (google-play-scraper)
+    # Thay vì chỉ check folder node_modules chung chung
+    library_path = 'node_modules/google-play-scraper'
+    
+    if not os.path.exists(library_path):
+        st.toast("⚙️ Đang cài đặt thư viện Node.js...", icon="⏳")
         try:
-            # Kiểm tra xem npm có tồn tại không
+            # Kiểm tra npm
             if shutil.which('npm') is None:
-                st.error("❌ Lỗi: Không tìm thấy 'npm'. Hãy chắc chắn bạn đã thêm 'nodejs' và 'npm' vào file packages.txt")
+                st.error("❌ Lỗi: Không tìm thấy 'npm'. Hãy kiểm tra packages.txt")
                 st.stop()
-                
-            subprocess.run(['npm', 'install'], check=True)
+            
+            # Chạy npm install
+            # Thêm --no-bin-links để tránh lỗi symlink trên một số server Linux
+            subprocess.run(['npm', 'install', '--no-bin-links'], check=True)
             st.toast("✅ Cài đặt Node.js thành công!", icon="🎉")
+            
+            # Reload lại app để đảm bảo môi trường nhận diện path mới
+            time.sleep(1)
+            st.rerun()
+            
         except subprocess.CalledProcessError as e:
             st.error(f"❌ Lỗi khi chạy npm install: {e}")
+            # Nếu lỗi, thử xóa node_modules để lần sau cài lại sạch sẽ
+            if os.path.exists('node_modules'):
+                shutil.rmtree('node_modules')
             st.stop()
 
 # Chạy khởi tạo ngay khi load app
