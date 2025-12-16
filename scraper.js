@@ -1,5 +1,4 @@
-// --- 1. POLYFILL FIX NODE 18 (QUAN TRỌNG) ---
-// Đoạn này vá lỗi "ReferenceError: File is not defined"
+// --- 1. POLYFILL FIX NODE 18 (BẮT BUỘC ĐỂ TRÁNH LỖI FILE API) ---
 try {
     if (typeof File === 'undefined') {
         const { Blob } = require('buffer');
@@ -16,8 +15,6 @@ try {
 }
 
 const fs = require('fs');
-// Import thư viện (Bản v10 tự động detect CommonJS)
-const gplay = require('google-play-scraper');
 
 // --- 2. CONFIG ---
 const mode = process.argv[2]; 
@@ -26,83 +23,28 @@ const targetCountry = process.argv[4] || 'vn';
 const targetToken = process.argv[5];
 const targetLang = targetCountry === 'vn' ? 'vi' : 'en';
 
+// Khai báo biến global để dùng chung
+let gplay;
+
+// --- 3. MAIN ROUTER ---
 async function main() {
     try {
+        // [QUAN TRỌNG] FIX LỖI ERR_REQUIRE_ESM
+        // Thay vì require(), ta dùng dynamic import()
+        const gplayModule = await import('google-play-scraper');
+        gplay = gplayModule.default;
+
+        // Router xử lý các mode
         if (mode === 'LIST') {
-            console.log(`Scraping List: ${target} in ${targetCountry}`);
-            
-            // Hàm lấy list an toàn
-            const fetchList = async (collection) => {
-                try {
-                    return await gplay.list({
-                        category: target,
-                        collection: collection,
-                        num: 20,
-                        country: targetCountry,
-                        lang: targetLang
-                    });
-                } catch (e) { 
-                    // console.error(`Error fetching ${collection}:`, e.message);
-                    return []; 
-                }
-            };
-
-            // v10 sử dụng gplay.collection.TOP_FREE (các biến hằng số)
-            const [free, paid, gross] = await Promise.all([
-                fetchList(gplay.collection.TOP_FREE),
-                fetchList(gplay.collection.TOP_PAID),
-                fetchList(gplay.collection.GROSSING)
-            ]);
-
-            let allApps = [];
-            const push = (l, t) => l?.forEach((a, i) => allApps.push({
-                ...a, 
-                category: target, 
-                country: targetCountry, 
-                collection_type: t, 
-                rank: i+1,
-                // v10 đôi khi trả về icon dạng mảng hoặc object, ta lấy string
-                icon: a.icon || "" 
-            }));
-
-            push(free, 'top_free');
-            push(paid, 'top_paid');
-            push(gross, 'top_grossing');
-            
-            console.log(`Found ${allApps.length} apps.`);
-            fs.writeFileSync('data/raw_data.json', JSON.stringify(allApps));
-
+            await scrapeCategoryList();
         } else if (mode === 'DETAIL') {
-            const d = await gplay.app({ appId: target, lang: targetLang, country: targetCountry });
-            
-            // Lấy reviews
-            try {
-                const reviews = await gplay.reviews({
-                    appId: target, sort: gplay.sort.NEWEST, num: 40, lang: targetLang, country: targetCountry
-                });
-                d.comments = reviews.data || [];
-                d.nextToken = reviews.nextPaginationToken;
-            } catch (e) { d.comments = []; }
-            
-            // Lấy permissions (v10 hỗ trợ tốt)
-            try {
-                const perms = await gplay.permissions({ appId: target, lang: targetLang, short: true });
-                d.permissions = perms;
-            } catch (e) {}
-
-            fs.writeFileSync('data/app_detail.json', JSON.stringify(d));
-        
+            await scrapeAppDetail();
         } else if (mode === 'SEARCH') {
-            const s = await gplay.search({ term: target, num: 20, country: targetCountry, lang: targetLang });
-            fs.writeFileSync('data/search_results.json', JSON.stringify(s));
-        
+            await scrapeSearch();
         } else if (mode === 'SIMILAR') {
-             const s = await gplay.similar({ appId: target, lang: targetLang, country: targetCountry });
-             fs.writeFileSync('data/similar_apps.json', JSON.stringify(s));
-             
+             await scrapeSimilar();
         } else if (mode === 'DEVELOPER') {
-             const s = await gplay.developer({ devId: target, lang: targetLang, country: targetCountry, num: 20 });
-             fs.writeFileSync('data/developer_apps.json', JSON.stringify(s));
+             await scrapeDeveloper();
         }
 
     } catch (e) {
@@ -111,4 +53,81 @@ async function main() {
     }
 }
 
+// --- CÁC HÀM XỬ LÝ LOGIC ---
+
+async function scrapeCategoryList() {
+    console.log(`Scraping List: ${target} in ${targetCountry}`);
+    
+    const fetchList = async (collection) => {
+        try {
+            return await gplay.list({
+                category: target,
+                collection: collection,
+                num: 20,
+                country: targetCountry,
+                lang: targetLang
+            });
+        } catch (e) { 
+            return []; 
+        }
+    };
+
+    const [free, paid, gross] = await Promise.all([
+        fetchList(gplay.collection.TOP_FREE),
+        fetchList(gplay.collection.TOP_PAID),
+        fetchList(gplay.collection.GROSSING)
+    ]);
+
+    let allApps = [];
+    const push = (l, t) => l?.forEach((a, i) => allApps.push({
+        ...a, 
+        category: target, 
+        country: targetCountry, 
+        collection_type: t, 
+        rank: i+1,
+        icon: a.icon || "" 
+    }));
+
+    push(free, 'top_free');
+    push(paid, 'top_paid');
+    push(gross, 'top_grossing');
+    
+    fs.writeFileSync('data/raw_data.json', JSON.stringify(allApps));
+}
+
+async function scrapeAppDetail() {
+    const d = await gplay.app({ appId: target, lang: targetLang, country: targetCountry });
+    
+    try {
+        const reviews = await gplay.reviews({
+            appId: target, sort: gplay.sort.NEWEST, num: 40, lang: targetLang, country: targetCountry
+        });
+        d.comments = reviews.data || [];
+        d.nextToken = reviews.nextPaginationToken;
+    } catch (e) { d.comments = []; }
+    
+    try {
+        const perms = await gplay.permissions({ appId: target, lang: targetLang, short: true });
+        d.permissions = perms;
+    } catch (e) {}
+
+    fs.writeFileSync('data/app_detail.json', JSON.stringify(d));
+}
+
+async function scrapeSearch() {
+    const s = await gplay.search({ term: target, num: 20, country: targetCountry, lang: targetLang });
+    fs.writeFileSync('data/search_results.json', JSON.stringify(s));
+}
+
+async function scrapeSimilar() {
+    const s = await gplay.similar({ appId: target, lang: targetLang, country: targetCountry });
+    fs.writeFileSync('data/similar_apps.json', JSON.stringify(s));
+}
+
+async function scrapeDeveloper() {
+    const s = await gplay.developer({ devId: target, lang: targetLang, country: targetCountry, num: 20 });
+    fs.writeFileSync('data/developer_apps.json', JSON.stringify(s));
+}
+
+// Chạy hàm main
 main();
