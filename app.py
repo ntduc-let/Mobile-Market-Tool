@@ -15,60 +15,56 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- HỆ THỐNG TỰ ĐỘNG CÀI ĐẶT & KIỂM TRA NODE.JS ---
-def ensure_node_environment():
-    """
-    Hàm này kiểm tra xem Node.js có chạy được thư viện không.
-    Nếu không, nó sẽ tự động chạy npm install.
-    """
-    # 1. Check nhanh: Thử chạy lệnh Node yêu cầu thư viện
-    # Nếu lệnh này chạy thành công (returncode 0), nghĩa là thư viện đã OK.
-    try:
-        check_cmd = ["node", "-e", "require('google-play-scraper')"]
-        subprocess.run(check_cmd, check=True, capture_output=True)
-        return True # Đã cài đặt ngon lành
-    except (subprocess.CalledProcessError, FileNotFoundError):
-        pass # Chưa cài hoặc lỗi -> Xuống phần cài đặt
-
-    # 2. Nếu chưa có, tiến hành cài đặt
-    placeholder = st.empty()
-    with placeholder.container():
-        st.warning("⚠️ Phát hiện thiếu thư viện Node.js. Đang tự động cài đặt...")
-        progress = st.progress(0)
+# --- HỆ THỐNG CÀI ĐẶT "ÉP BUỘC" (FORCE INSTALL) ---
+def force_install_dependencies():
+    with st.sidebar:
+        st.subheader("🔧 Trạng thái Hệ thống")
         
-        # Kiểm tra file package.json
-        if not os.path.exists("package.json"):
-            st.error("🚨 LỖI: Không tìm thấy file 'package.json' trên GitHub!")
-            st.stop()
-            
+        # 1. Kiểm tra Node Version
         try:
-            progress.progress(20, text="Đang chạy npm install...")
-            # Chạy npm install
-            process = subprocess.run(
-                ["npm", "install"], 
-                capture_output=True, 
-                text=True, 
-                check=True
-            )
-            progress.progress(90, text="Đang kiểm tra lại...")
-            
-            # Kiểm tra lại lần nữa
-            subprocess.run(["node", "-e", "require('google-play-scraper')"], check=True)
-            
-            progress.progress(100, text="Hoàn tất!")
-            st.success("✅ Đã cài đặt xong môi trường! Đang khởi động lại...")
-            time.sleep(1)
-            st.rerun() # Tự động load lại trang
-            
-        except subprocess.CalledProcessError as e:
-            st.error("❌ Cài đặt thất bại! Chi tiết lỗi:")
-            with st.expander("Xem Log chi tiết"):
-                st.code(e.stderr)
-                st.code(e.stdout)
+            node_v = subprocess.run(["node", "-v"], capture_output=True, text=True).stdout.strip()
+            npm_v = subprocess.run(["npm", "-v"], capture_output=True, text=True).stdout.strip()
+            st.write(f"✅ Node: `{node_v}` | NPM: `{npm_v}`")
+        except:
+            st.error("❌ Node.js chưa được cài ở cấp hệ thống (Server Logs)!")
             st.stop()
 
-# Gọi hàm này ngay lập tức khi App chạy
-ensure_node_environment()
+        # 2. Kiểm tra thư viện (Check file thực tế)
+        lib_path = "node_modules/google-play-scraper"
+        is_installed = os.path.exists(lib_path)
+        
+        if is_installed:
+            st.success("✅ Thư viện Scraper: Đã có")
+        else:
+            st.warning("⚠️ Thư viện Scraper: CHƯA CÓ")
+            
+            # Nút bấm "Cứu hộ"
+            if st.button("🆘 Cài đặt ngay (Force Install)", type="primary"):
+                status = st.status("Đang cài đặt thư viện...", expanded=True)
+                try:
+                    # Lệnh cài đặt trực tiếp, không cần package.json
+                    status.write("🚀 Đang chạy: `npm install google-play-scraper`")
+                    # Dùng shell=True để đảm bảo lệnh chạy đúng môi trường
+                    result = subprocess.run(
+                        "npm install google-play-scraper", 
+                        shell=True, capture_output=True, text=True
+                    )
+                    
+                    if result.returncode == 0:
+                        status.write("📦 Kết quả cài đặt:")
+                        status.code(result.stdout)
+                        status.update(label="✅ Đã cài xong! Đang tải lại...", state="complete")
+                        time.sleep(1)
+                        st.rerun()
+                    else:
+                        status.update(label="❌ Lỗi cài đặt!", state="error")
+                        st.error("Chi tiết lỗi:")
+                        st.code(result.stderr)
+                except Exception as e:
+                    st.error(f"Lỗi ngoại lệ: {e}")
+
+# Chạy hàm kiểm tra ngay khi vào app
+force_install_dependencies()
 
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
