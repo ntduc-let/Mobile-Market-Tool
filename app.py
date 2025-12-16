@@ -257,15 +257,19 @@ st.markdown("""
         top: 50%;
         left: 50%;
         transform: translate(-50%, -50%);
-        width: 90vw;  /* Chiếm 90% chiều rộng màn hình */
-        height: 90vh; /* Chiếm 90% chiều cao màn hình */
-        object-fit: contain; /* Giữ nguyên tỷ lệ ảnh */
-        z-index: 9999; /* Luôn nổi lên trên cùng */
-        background-color: rgba(0,0,0,0.95); /* Nền đen mờ phía sau */
+        width: 90vw;
+        height: 90vh;
+        object-fit: contain;
+        z-index: 9999;
+        background-color: rgba(0,0,0,0.95);
         border-radius: 4px;
         box-shadow: 0 0 50px rgba(0,0,0,0.8);
         cursor: zoom-out;
-        outline: none; /* Bỏ viền xanh mặc định */
+        outline: none;
+        
+        /* [QUAN TRỌNG] Dòng này giúp click vào ảnh sẽ tắt ảnh đi */
+        /* Lý do: Nó làm chuột click "xuyên qua" ảnh trúng vào nền web, gây mất focus */
+        pointer-events: none; 
     }
 </style>
 """, unsafe_allow_html=True)
@@ -650,20 +654,18 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         else: 
                             st.error("Không phản hồi từ Server.")
 
-        # TAB 2: MEDIA (ĐÃ CẬP NHẬT: CLICK ĐỂ PHÓNG TO)
+        # TAB 2: MEDIA
         with tab2:
-            # Video Trailer
             if d.get('video'):
                 st.subheader("🎥 Video Trailer")
                 st.video(d.get('video'))
                 st.divider()
             
-            # Screenshots
             if d.get('screenshots'):
                 st.subheader("🖼️ Screenshots")
-                st.caption("💡 Mẹo: Click vào ảnh để phóng to. Click ra ngoài để thu nhỏ.")
+                st.caption("💡 Click vào ảnh để phóng to/thu nhỏ.")
                 
-                # [QUAN TRỌNG] Thêm tabindex="0" để kích hoạt trạng thái :focus của CSS
+                # Vẫn giữ tabindex="0"
                 imgs_html = "".join([
                     f'<img src="{url}" class="screenshot-img" tabindex="0">' 
                     for url in d.get('screenshots')
