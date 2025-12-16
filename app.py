@@ -17,49 +17,39 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- HÀM KHỞI TẠO MÔI TRƯỜNG (RESET NODEJS) ---
-def init_environment():
-    """Kiểm tra và cài đặt môi trường Node.js 18"""
+# --- KHU VỰC QUẢN LÝ HỆ THỐNG (SIDEBAR) ---
+st.sidebar.title("🔧 System Admin")
+
+# NÚT BẤM CỨU HỘ: Dùng để xóa sạch thư viện lỗi và cài lại
+if st.sidebar.button("🔥 HARD RESET (Cài lại Node.js)", type="primary"):
+    status = st.sidebar.empty()
+    status.info("🧹 Đang xóa thư viện cũ...")
     
-    # 1. Tạo thư mục data
-    if not os.path.exists('data'):
-        os.makedirs('data')
-
-    # 2. HARD RESET: Xóa sạch thư viện cũ để tránh xung đột
-    # Đổi tên file lock để ép hệ thống chạy lại quy trình này
-    lock_file = "install_clean_v9.lock"
-
-    if not os.path.exists(lock_file):
-        status_container = st.empty()
-        status_container.toast("Đang dọn dẹp thư viện cũ...", icon="🧹")
-        
-        # Xóa node_modules cũ
-        if os.path.exists('node_modules'):
-            try: shutil.rmtree('node_modules')
-            except: pass
+    # 1. Xóa folder node_modules
+    if os.path.exists('node_modules'):
+        try: shutil.rmtree('node_modules')
+        except Exception as e: st.sidebar.error(f"Lỗi xóa node_modules: {e}")
             
-        # Xóa package-lock.json cũ
-        if os.path.exists('package-lock.json'):
-            try: os.remove('package-lock.json')
-            except: pass
+    # 2. Xóa file lock của npm
+    if os.path.exists('package-lock.json'):
+        try: os.remove('package-lock.json')
+        except Exception as e: st.sidebar.error(f"Lỗi xóa package-lock: {e}")
 
-        status_container.toast("Đang cài đặt thư viện Node.js (v9.1.0)...", icon="⏳")
-        try:
-            # Chạy npm install
-            subprocess.run(['npm', 'install'], check=True)
-            
-            # Tạo file lock đánh dấu thành công
-            with open(lock_file, 'w') as f:
-                f.write("installed")
-                
-            status_container.toast("Cài đặt xong! Đang khởi động lại...", icon="✅")
-            time.sleep(1)
-            st.rerun()
-        except subprocess.CalledProcessError as e:
-            st.error(f"❌ Lỗi cài đặt Node.js: {e}")
-            st.stop()
+    status.info("⏳ Đang chạy npm install (v9.1.0)...")
+    try:
+        # 3. Cài lại mới tinh
+        result = subprocess.run(['npm', 'install'], capture_output=True, text=True, check=True)
+        status.success("✅ Cài đặt thành công! App sẽ tự reload sau 2s.")
+        st.toast("Cài đặt thành công!", icon="✅")
+        time.sleep(2)
+        st.rerun()
+    except subprocess.CalledProcessError as e:
+        status.error("❌ Lỗi cài đặt!")
+        st.sidebar.code(e.stderr)
 
-init_environment()
+# Tự động cài lần đầu nếu chưa có folder node_modules (phòng hờ)
+if not os.path.exists('node_modules'):
+    st.warning("⚠️ Chưa phát hiện thư viện Node.js. Vui lòng bấm nút 'HARD RESET' bên trái để cài đặt lần đầu.")
 
 # --- BACKEND FUNCTIONS ---
 def run_node_safe(mode, target, country, output_file, token=None):
