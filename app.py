@@ -652,15 +652,32 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
 
         # TAB 4: SIMILAR (Code cũ, chỉ đổi vị trí tab)
         with tab4:
-            cols = st.columns(3)
-            for i, s in enumerate(st.session_state.similar_apps[:9]):
-                with cols[i%3]: render_mini_card(s, curr_country, i, "sim")
+            # 1. Lọc bỏ chính App hiện tại ra khỏi danh sách (tránh hiện lại chính nó)
+            current_id = d.get('appId')
+            sims = [s for s in st.session_state.similar_apps if s.get('appId') != current_id]
+            
+            if sims:
+                cols = st.columns(3)
+                # Chỉ hiển thị tối đa 9 ứng dụng đối thủ
+                for i, s in enumerate(sims[:9]):
+                    with cols[i % 3]:
+                        # Sử dụng hàm render có sẵn
+                        render_mini_card(s, sapp['country_override'], i, "sim")
+            else:
+                st.info("⚠️ Không tìm thấy đối thủ hoặc ứng dụng tương tự nào từ Google Play.")
 
-        # TAB 5: DEV APPS (Code cũ, chỉ đổi vị trí tab)
+        # TAB 5: CÙNG DEV (NÊN CẬP NHẬT LUÔN)
         with tab5:
-            cols = st.columns(3)
-            for i, dv in enumerate(st.session_state.dev_apps[:9]):
-                with cols[i%3]: render_mini_card(dv, curr_country, i, "dev")
+            current_id = d.get('appId')
+            devs = [dv for dv in st.session_state.dev_apps if dv.get('appId') != current_id]
+            
+            if devs:
+                cols = st.columns(3)
+                for i, dv in enumerate(devs[:9]):
+                    with cols[i % 3]:
+                        render_mini_card(dv, sapp['country_override'], i, "dev")
+            else:
+                st.info("Nhà phát triển này chỉ có 1 ứng dụng này trên Store.")
 
         # TAB 6: INFO (Code cũ, đưa vào tab cuối)
         with tab6:
