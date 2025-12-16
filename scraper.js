@@ -133,29 +133,24 @@ async function scrapeAppDetail() {
     fs.writeFileSync('data/app_detail.json', JSON.stringify(d));
 }
 
-// --- CẬP NHẬT HÀM SEARCH: THÊM LIMIT VÀ PRICE FILTER ---
+// --- CẬP NHẬT SEARCH: BỎ LỌC GIÁ ---
 async function scrapeSearch() {
-    // Arg 5: Limit, Arg 6: Price
+    // Arg 5: Chỉ còn Limit (Số lượng)
     const limit = parseInt(process.argv[5]) || 20;
-    
-    // Xử lý tham số giá: Chỉ chấp nhận 'all', 'free', 'paid'
-    let priceParam = process.argv[6];
-    if (!['free', 'paid'].includes(priceParam)) priceParam = 'all';
 
-    console.log(`🔎 Searching: "${target}" | Limit: ${limit} | Price Filter: ${priceParam}`);
+    console.log(`🔎 Searching: "${target}" | Limit: ${limit}`);
     
     try {
         const s = await gplay.search({ 
             term: target, 
             num: limit, 
             country: targetCountry, 
-            lang: targetLang,
-            price: priceParam 
+            lang: targetLang
+            // Đã xóa tham số price
         });
         fs.writeFileSync('data/search_results.json', JSON.stringify(s));
     } catch (e) {
         console.error("Search Error:", e.message);
-        // Trả về mảng rỗng nếu lỗi
         fs.writeFileSync('data/search_results.json', JSON.stringify([]));
     }
 }

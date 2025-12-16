@@ -440,65 +440,36 @@ def render_mini_card(app, country, rank_idx, key_prefix):
 
 # --- 8. SIDEBAR ---
 st.sidebar.title("🚀 Super Tool")
+
+# --- CẬP NHẬT SIDEBAR: BỎ LỌC GIÁ ---
 st.sidebar.subheader("🔍 Tìm kiếm")
 search_term = st.sidebar.text_input("Nhập Từ khóa hoặc App ID:", placeholder="VD: com.facebook.katana")
 
-# [UPDATE] Thêm tùy chọn nâng cao cho tìm kiếm
-c_s1, c_s2 = st.sidebar.columns(2)
-with c_s1:
-    search_country_label = st.selectbox("Quốc gia", list(COUNTRIES_LIST.keys()), index=0)
-with c_s2:
-    search_price_label = st.selectbox("Giá", ["Tất cả", "Miễn phí", "Trả phí"])
+# Chỉ còn chọn Quốc gia
+search_country_label = st.sidebar.selectbox("Quốc gia", list(COUNTRIES_LIST.keys()), index=0)
 
-# [UPDATE] Thanh trượt số lượng kết quả (Max 250 theo Google API)
+# Thanh trượt số lượng (Vẫn giữ lại vì hữu ích)
 search_limit = st.sidebar.slider("Số lượng kết quả", 10, 250, 30, step=10)
-
-# Map giá trị cho API
-price_map = {"Tất cả": "all", "Miễn phí": "free", "Trả phí": "paid"}
-
-# --- CẬP NHẬT SIDEBAR APP.PY (Đoạn xử lý nút tìm kiếm) ---
 
 if st.sidebar.button("🔎 Tìm ngay", type="primary"):
     if search_term:
         s_country = COUNTRIES_LIST[search_country_label]
-        s_price = price_map[search_price_label] # 'all', 'free', hoặc 'paid'
         
-        # 1. NẾU LÀ APP ID (Bỏ qua lọc giá, ưu tiên tìm đích danh)
+        # 1. NẾU LÀ APP ID
         if "." in search_term and " " not in search_term:
             st.session_state.selected_app = {'app_id': search_term.strip(), 'title': search_term, 'country_override': s_country}
             st.session_state.view_mode = 'detail'
             st.rerun()
             
-        # 2. NẾU LÀ TỪ KHÓA (ÁP DỤNG LỌC 2 LỚP)
+        # 2. NẾU LÀ TỪ KHÓA
         else:
-            with st.status(f"Đang tìm '{search_term}' ({search_price_label})..."):
-                # Gọi Node.js
-                raw_results = run_node_safe_custom("SEARCH", search_term, s_country, "search_results.json", str(search_limit), s_price)
+            with st.status(f"Đang tìm '{search_term}'..."):
+                # Gọi Node.js: Bỏ tham số s_price, chỉ truyền limit
+                res = run_node_safe_custom("SEARCH", search_term, s_country, "search_results.json", str(search_limit))
                 
-                if raw_results is not None:
-                    # --- LỌC LẠI BẰNG PYTHON (Đảm bảo chính xác 100%) ---
-                    final_results = []
-                    
-                    if s_price == 'all':
-                        final_results = raw_results
-                    else:
-                        for app in raw_results:
-                            is_free = app.get('free', True) # Mặc định coi là free nếu thiếu field
-                            
-                            # Nếu chọn 'Miễn phí' -> Chỉ lấy App có free=True
-                            if s_price == 'free' and is_free:
-                                final_results.append(app)
-                            # Nếu chọn 'Trả phí' -> Chỉ lấy App có free=False
-                            elif s_price == 'paid' and not is_free:
-                                final_results.append(app)
-                    
-                    # Cập nhật kết quả vào Session
-                    st.session_state.search_results = final_results
-                    
-                    # Thông báo nếu bộ lọc loại bỏ hết kết quả
-                    if raw_results and not final_results:
-                        st.toast(f"Google trả về {len(raw_results)} kqua nhưng không có cái nào là '{search_price_label}'!", icon="⚠️")
-                    
+                if res is not None:
+                    # Không cần lọc lại bằng Python nữa, lấy thẳng kết quả gốc
+                    st.session_state.search_results = res
                     st.session_state.view_mode = 'search_results'
                     st.rerun()
                 else: 
