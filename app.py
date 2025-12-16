@@ -486,45 +486,88 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
         # Đã xóa tab Retention
         tab1, tab2, tab3, tab4 = st.tabs(["📊 Reviews", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Thông tin"])
 
+        # --- TAB 1: REVIEWS (ĐÃ NÂNG CẤP) ---
         with tab1:
             c_filter, c_hist = st.columns([2, 3])
+            
+            # Bộ lọc review
             with c_filter:
                 rev_filter = st.selectbox("Lọc đánh giá:", ["Tất cả", "Tích cực (4-5 ⭐)", "Tiêu cực (1-3 ⭐)"])
                 all_revs = st.session_state.current_reviews
+                
                 show_revs = all_revs
-                if rev_filter == "Tích cực (4-5 ⭐)": show_revs = [r for r in all_revs if r['score'] >= 4]
-                elif rev_filter == "Tiêu cực (1-3 ⭐)": show_revs = [r for r in all_revs if r['score'] <= 3]
+                if rev_filter == "Tích cực (4-5 ⭐)": 
+                    show_revs = [r for r in all_revs if r.get('score', 0) >= 4]
+                elif rev_filter == "Tiêu cực (1-3 ⭐)": 
+                    show_revs = [r for r in all_revs if r.get('score', 0) <= 3]
+                
                 st.caption(f"Hiển thị {len(show_revs)} / {len(all_revs)} review.")
+
+            # Biểu đồ Histogram
             with c_hist:
                 hist = d.get('histogram')
                 if hist:
-                    h_df = pd.DataFrame({'Star':['1','2','3','4','5'], 'V': [hist.get('1'),hist.get('2'),hist.get('3'),hist.get('4'),hist.get('5')]})
-                    fig = px.bar(h_df, x='Star', y='V', color='Star', color_discrete_sequence=['#e53935','#fb8c00','#fdd835','#7cb342','#43a047'])
-                    fig.update_layout(height=200, margin=dict(t=0,b=0,l=0,r=0), plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', font_color='#ccc', showlegend=False)
+                    # Chuyển đổi keys sang list để tránh lỗi index
+                    data_hist = {'Star': ['1','2','3','4','5'], 'V': [hist.get('1',0), hist.get('2',0), hist.get('3',0), hist.get('4',0), hist.get('5',0)]}
+                    h_df = pd.DataFrame(data_hist)
+                    fig = px.bar(h_df, x='Star', y='V', color='Star', 
+                                 color_discrete_sequence=['#e53935','#fb8c00','#fdd835','#7cb342','#43a047'])
+                    fig.update_layout(height=200, margin=dict(t=0,b=0,l=0,r=0), 
+                                      plot_bgcolor='rgba(0,0,0,0)', paper_bgcolor='rgba(0,0,0,0)', 
+                                      font_color='#ccc', showlegend=False)
                     st.plotly_chart(fig, use_container_width=True)
             
             st.markdown("---")
-            for r in show_revs:
-                star_str = '⭐' * r['score']
-                st.markdown(f"""
-                <div class="review-card-modern">
-                    <div class="review-header">
-                        <span class="review-user">{r['userName']}</span>
-                        <span>{r['date']}</span>
+            
+            # Hiển thị danh sách Review
+            if show_revs:
+                for r in show_revs:
+                    star_str = '⭐' * int(r.get('score', 0))
+                    user_name = r.get('userName', 'Người dùng ẩn')
+                    date_post = r.get('date', '')
+                    content = r.get('text', '')
+                    
+                    st.markdown(f"""
+                    <div class="review-card-modern">
+                        <div class="review-header">
+                            <span class="review-user">{user_name}</span>
+                            <span>{date_post}</span>
+                        </div>
+                        <div style="color: #ffbd45; margin-bottom: 8px;">{star_str}</div>
+                        <div class="review-text">"{content}"</div>
                     </div>
-                    <div style="color: #ffbd45; margin-bottom: 8px;">{star_str}</div>
-                    <div class="review-text">"{r['text']}"</div>
-                </div>
-                """, unsafe_allow_html=True)
+                    """, unsafe_allow_html=True)
+            else:
+                st.info("Chưa có đánh giá nào phù hợp.")
 
+            # Nút tải thêm (Logic mới)
             if st.session_state.next_token:
-                if st.button("⬇️ Tải thêm review"):
-                    more = run_node_safe("MORE_REVIEWS", d['appId'], curr_country, "more_reviews.json", st.session_state.next_token)
-                    if more:
-                        st.session_state.current_reviews.extend(more.get('comments', []))
-                        st.session_state.next_token = more.get('nextToken')
-                        st.rerun()
-
+                if st.button("⬇️ Tải thêm review cũ hơn", use_container_width=True):
+                    with st.spinner("Đang kết nối Google Play..."):
+                        more = run_node_safe("MORE_REVIEWS", d['appId'], curr_country, "more_reviews.json", st.session_state.next_token)
+                        
+                        if more:
+                            # Kiểm tra nếu Node.js trả về lỗi logic
+                            if more.get('error'):
+                                st.error(f"⚠️ Không thể tải thêm: {more.get('error')}")
+                                # Nếu lỗi token hết hạn, ta xóa token đi để ẩn nút
+                                if "token" in more.get('error', '').lower():
+                                    st.session_state.next_token = None
+                                    st.rerun()
+                            else:
+                                new_comments = more.get('comments', [])
+                                if new_comments:
+                                    st.session_state.current_reviews.extend(new_comments)
+                                    st.session_state.next_token = more.get('nextToken')
+                                    st.success(f"Đã tải thêm {len(new_comments)} review!")
+                                    time.sleep(1)
+                                    st.rerun()
+                                else:
+                                    st.warning("Không tìm thấy review nào cũ hơn.")
+                                    st.session_state.next_token = None
+                                    st.rerun()
+                        else:
+                            st.error("❌ Lỗi kết nối Server (Scraper Crash). Vui lòng thử lại.")
         with tab2:
             sims = st.session_state.similar_apps
             if sims:

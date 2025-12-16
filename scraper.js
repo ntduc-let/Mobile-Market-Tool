@@ -129,5 +129,36 @@ async function scrapeDeveloper() {
     fs.writeFileSync('data/developer_apps.json', JSON.stringify(s));
 }
 
+// === 5. LOAD MORE REVIEWS (ĐÃ FIX LỖI CRASH) ===
+async function scrapeMoreReviews() {
+    console.log(`🚀 More Reviews: Token length ${targetToken ? targetToken.length : 0}`);
+    try {
+        if (!targetToken) throw new Error("Token phân trang bị rỗng (Undefined)");
+
+        const reviewsResult = await gplay.reviews({
+            appId: target, 
+            sort: gplay.sort.NEWEST, 
+            num: 40, 
+            lang: targetLang, 
+            country: targetCountry,
+            nextPaginationToken: targetToken
+        });
+
+        saveJSON('more_reviews.json', { 
+            comments: reviewsResult.data || [], 
+            nextToken: reviewsResult.nextPaginationToken 
+        });
+
+    } catch (e) { 
+        console.error(`⚠️ Lỗi tải review: ${e.message}`);
+        // Thay vì exit(1), ta lưu file kết quả rỗng kèm thông báo lỗi để App không bị đơ
+        saveJSON('more_reviews.json', { 
+            comments: [], 
+            nextToken: null, // Reset token để ẩn nút tải thêm
+            error: e.message 
+        });
+    }
+}
+
 // Chạy hàm main
 main();
