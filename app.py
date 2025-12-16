@@ -10,6 +10,19 @@ import plotly.express as px
 import re
 import time
 
+# Hàm kiểm tra và cài đặt node_modules nếu chưa có
+def install_npm_packages():
+    if not os.path.exists('./node_modules'):
+        st.write("Đang cài đặt thư viện Node.js... (Vui lòng đợi 1-2 phút)")
+        # Chạy npm install
+        subprocess.run(['npm', 'install'], check=True)
+        # Hoặc cài cụ thể thư viện nếu không có package.json
+        # subprocess.run(['npm', 'install', 'google-play-scraper'], check=True)
+        st.success("Cài đặt xong!")
+
+# Gọi hàm này trước khi chạy các logic khác
+install_npm_packages()
+
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
