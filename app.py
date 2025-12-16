@@ -15,7 +15,7 @@ st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
 
-# --- 1. SETUP NODE ENVIRONMENT (DOWNGRADE TO V9 STABLE) ---
+# --- 1. SETUP NODE ENVIRONMENT (FIX: FORCE DOWNGRADE TO V9) ---
 def setup_node_env():
     current_dir = os.getcwd()
     node_modules = os.path.join(current_dir, "node_modules")
@@ -24,62 +24,60 @@ def setup_node_env():
     # Set biến môi trường
     os.environ["NODE_PATH"] = node_modules
 
-    # Nội dung package.json cho phiên bản V9 (Dùng CommonJS, tương thích Node 18)
+    # Nội dung package.json BẮT BUỘC cho bản v9 (không dùng type: module)
     pkg_config = {
         "name": "market-tool",
         "version": "1.0.0",
-        "description": "Stable Scraper",
+        "description": "Scraper V9",
         "dependencies": {
-            "google-play-scraper": "^9.1.1"  # <--- HẠ CẤP XUỐNG V9 ĐỂ FIX LỖI "FILE NOT DEFINED"
+            "google-play-scraper": "^9.1.1"  # <--- BẢN 9.1.1 LÀ CHÌA KHÓA
         }
     }
     
-    # Kiểm tra xem cần cài lại không
+    # Logic kiểm tra: Nếu đang dùng bản cũ/sai config thì phải xóa đi làm lại
     need_reinstall = False
     
-    # Nếu file package.json tồn tại, kiểm tra xem nó có đang dùng bản v10 (lỗi) hay bản v9 (ok)
     if os.path.exists("package.json"):
         try:
             with open("package.json", "r") as f:
-                existing_pkg = json.load(f)
-                # Nếu thấy config cũ có "type": "module" -> Đó là bản v10 gây lỗi -> XÓA
-                if existing_pkg.get("type") == "module":
+                existing = json.load(f)
+                # Nếu file config có dòng "type": "module" -> Đó là bản v10 gây lỗi -> Cài lại
+                if existing.get("type") == "module":
                     need_reinstall = True
         except:
             need_reinstall = True
     else:
         need_reinstall = True
 
-    # Tiến hành cài đặt lại nếu cần
+    # Thực hiện cài đặt
     if need_reinstall or not os.path.exists(lib_check):
         placeholder = st.empty()
-        with placeholder.status("🧹 Đang dọn dẹp và cài bản ổn định (v9)...", expanded=True) as status:
+        with placeholder.status("🧹 Đang hạ cấp xuống bản ổn định (v9)...", expanded=True) as status:
             try:
-                # 1. Xóa sạch file cũ để tránh xung đột
-                if os.path.exists("package.json"): os.remove("package.json")
-                if os.path.exists("package-lock.json"): os.remove("package-lock.json")
-                if os.path.exists("node_modules"): shutil.rmtree("node_modules", ignore_errors=True)
+                # 1. Xóa sạch thư mục cũ
+                if os.path.exists("node_modules"):
+                    shutil.rmtree("node_modules", ignore_errors=True)
+                if os.path.exists("package-lock.json"):
+                    os.remove("package-lock.json")
                 
-                # 2. Ghi file cấu hình mới (V9)
+                # 2. Tạo file package.json mới
                 with open("package.json", "w") as f:
                     json.dump(pkg_config, f, indent=2)
                 
-                status.write("⬇️ Đang chạy `npm install` (Phiên bản tương thích Node 18)...")
+                status.write("⬇️ Đang chạy `npm install`...")
                 subprocess.run("npm install", shell=True, check=True, cwd=current_dir)
                 
-                status.update(label="✅ Đã hạ cấp thành công! Đang khởi động lại...", state="complete")
+                status.update(label="✅ Đã xong! Hệ thống đang khởi động lại...", state="complete")
                 time.sleep(1)
                 st.rerun()
             except Exception as e:
                 st.error(f"Lỗi cài đặt: {e}")
                 st.stop()
 
-# Gọi hàm setup
 setup_node_env()
 
-# --- 2. RUN NODE SCRAPER ---
+# --- 2. RUN NODE SCRAPER (GIỮ NGUYÊN) ---
 def run_node_scraper(mode, target, country, output_file, token=None):
-    """Trả về (data, error_message)"""
     file_path = f"data/{output_file}"
     if os.path.exists(file_path):
         try: os.remove(file_path)
@@ -105,8 +103,7 @@ def run_node_scraper(mode, target, country, output_file, token=None):
             return None, result.stderr
             
         json_str = result.stdout.strip()
-        if not json_str: 
-            return None, "Node trả về dữ liệu rỗng."
+        if not json_str: return None, "Empty response"
             
         data = json.loads(json_str)
         return data, None
@@ -114,7 +111,7 @@ def run_node_scraper(mode, target, country, output_file, token=None):
     except Exception as e:
         return None, str(e)
 
-# --- 3. DATABASE FUNCTIONS ---
+# --- 3. DATABASE & UI FUNCTIONS (GIỮ NGUYÊN NHƯ CŨ) ---
 def save_chart_data(data, category_id, country_code):
     if not data: return False
     conn = sqlite3.connect(DB_PATH)
@@ -157,7 +154,6 @@ def load_app_history(app_id, country):
         conn.close(); return df
     except: return pd.DataFrame()
 
-# --- UI HELPER ---
 def estimate_revenue(d, country):
     if not d: return "N/A"
     tier_multiplier = 5.0 if country in ['us', 'jp', 'kr', 'uk', 'au', 'ca', 'de'] else 1.0
@@ -192,7 +188,7 @@ def render_mini_card(app, country, rank_idx, key_prefix):
         st.session_state.view_mode = 'detail'
         st.rerun()
 
-# --- CONFIG ---
+# --- CONFIG & STATE ---
 CATEGORIES_LIST = {
     "🎮 Game: Giải đố (Puzzle)": "GAME_PUZZLE",
     "🎮 Game: Hành động (Action)": "GAME_ACTION",
@@ -207,7 +203,6 @@ CATEGORIES_LIST = {
 }
 COUNTRIES_LIST = { "🇻🇳 Việt Nam": "vn", "🇺🇸 Hoa Kỳ": "us", "🇯🇵 Nhật Bản": "jp", "🇰🇷 Hàn Quốc": "kr", "🇨🇳 Trung Quốc": "cn" }
 
-# --- STATE ---
 if 'view_mode' not in st.session_state: st.session_state.view_mode = 'list'
 if 'selected_app' not in st.session_state: st.session_state.selected_app = None
 if 'search_results' not in st.session_state: st.session_state.search_results = []

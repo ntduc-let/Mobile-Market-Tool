@@ -1,14 +1,14 @@
 const gplay = require('google-play-scraper');
 
 const args = process.argv.slice(2);
-const mode = args[0];       // LIST, DETAIL, SEARCH...
-const target = args[1];     // Category ID, App ID...
+const mode = args[0];
+const target = args[1];
 const country = args[2] || 'us';
 const token = args[3];
 
 const lang = (country === 'vn') ? 'vi' : 'en';
 
-// Map thể loại
+// Map thể loại (Dùng cho mode LIST)
 const CATEGORY_MAP = {
     "GAME_PUZZLE": gplay.category.GAME_PUZZLE,
     "GAME_ACTION": gplay.category.GAME_ACTION,
