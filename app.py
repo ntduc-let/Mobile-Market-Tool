@@ -231,6 +231,42 @@ st.markdown("""
     .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: bold; margin-right: 6px; border: 1px solid rgba(255,255,255,0.1); display: inline-block;}
     .badge-ad { background-color: rgba(230, 81, 0, 0.2); color: #ff9800; }
     .badge-iap { background-color: rgba(27, 94, 32, 0.2); color: #4caf50; }
+            
+    /* --- CSS CHO SCREENSHOTS (MỚI: CÓ ZOOM) --- */
+    .screenshot-container { 
+        overflow-x: auto; 
+        white-space: nowrap; 
+        padding-bottom: 15px; 
+        scrollbar-width: thin; 
+    }
+    
+    .screenshot-img { 
+        height: 350px; 
+        border-radius: 12px; 
+        margin-right: 12px; 
+        display: inline-block; 
+        box-shadow: 0 4px 10px rgba(0,0,0,0.3); 
+        border: 1px solid #444; 
+        transition: transform 0.3s ease;
+        cursor: zoom-in; /* Con trỏ hình kính lúp */
+    }
+
+    /* Hiệu ứng Lightbox khi click (focus) vào ảnh */
+    .screenshot-img:focus {
+        position: fixed;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 90vw;  /* Chiếm 90% chiều rộng màn hình */
+        height: 90vh; /* Chiếm 90% chiều cao màn hình */
+        object-fit: contain; /* Giữ nguyên tỷ lệ ảnh */
+        z-index: 9999; /* Luôn nổi lên trên cùng */
+        background-color: rgba(0,0,0,0.95); /* Nền đen mờ phía sau */
+        border-radius: 4px;
+        box-shadow: 0 0 50px rgba(0,0,0,0.8);
+        cursor: zoom-out;
+        outline: none; /* Bỏ viền xanh mặc định */
+    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -614,7 +650,7 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         else: 
                             st.error("Không phản hồi từ Server.")
 
-        # TAB 2: MEDIA (HOÀN TOÀN MỚI)
+        # TAB 2: MEDIA (ĐÃ CẬP NHẬT: CLICK ĐỂ PHÓNG TO)
         with tab2:
             # Video Trailer
             if d.get('video'):
@@ -625,8 +661,14 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
             # Screenshots
             if d.get('screenshots'):
                 st.subheader("🖼️ Screenshots")
-                # Tạo HTML cuộn ngang cho ảnh
-                imgs_html = "".join([f'<img src="{url}" class="screenshot-img">' for url in d.get('screenshots')])
+                st.caption("💡 Mẹo: Click vào ảnh để phóng to. Click ra ngoài để thu nhỏ.")
+                
+                # [QUAN TRỌNG] Thêm tabindex="0" để kích hoạt trạng thái :focus của CSS
+                imgs_html = "".join([
+                    f'<img src="{url}" class="screenshot-img" tabindex="0">' 
+                    for url in d.get('screenshots')
+                ])
+                
                 st.markdown(f'<div class="screenshot-container">{imgs_html}</div>', unsafe_allow_html=True)
             else: st.info("Không có ảnh chụp màn hình.")
 
