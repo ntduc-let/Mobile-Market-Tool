@@ -10,6 +10,21 @@ import plotly.express as px
 import re
 import time
 
+# --- TỰ ĐỘNG CÀI NODE MODULES TRÊN CLOUD ---
+def install_node_dependencies():
+    """Kiểm tra và cài đặt thư viện Node.js nếu chưa có"""
+    if not os.path.exists("node_modules"):
+        with st.spinner("Đang cài đặt môi trường Node.js (Lần đầu chạy sẽ hơi lâu)..."):
+            try:
+                # Chạy lệnh npm install
+                subprocess.run(["npm", "install"], check=True)
+                st.success("✅ Đã cài xong Node modules!")
+            except Exception as e:
+                st.error(f"Lỗi cài đặt Node.js: {e}")
+
+# Gọi hàm này ngay khi app chạy
+install_node_dependencies()
+
 st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
 DB_PATH = 'data/market_data.db'
 NODE_SCRIPT = 'scraper.js'
@@ -322,14 +337,44 @@ sel_cat_lbl = st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))
 target_country = COUNTRIES_LIST[sel_country_lbl]
 target_cat = CATEGORIES_LIST[sel_cat_lbl]
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
-    with st.status("Đang quét..."):
+    with st.status("Đang quét dữ liệu...", expanded=True) as status:
         try:
-            subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True)
+            # Kiểm tra xem file scraper.js có tồn tại không
+            if not os.path.exists(NODE_SCRIPT):
+                st.error(f"❌ Không tìm thấy file '{NODE_SCRIPT}' trên server!")
+                status.update(label="Thiếu file", state="error")
+                st.stop()
+
+            # Chạy lệnh Node và BẮT LẤY lỗi chi tiết (capture_output=True)
+            result = subprocess.run(
+                ["node", NODE_SCRIPT, "LIST", target_cat, target_country],
+                capture_output=True, text=True, check=True
+            )
+            
+            # Nếu chạy OK -> Lưu vào DB
             if save_data_to_db(target_cat, target_country):
+                status.update(label="✅ Thành công!", state="complete")
                 st.session_state.view_mode = 'list'
                 st.rerun()
-            else: st.error("Không lưu được DB.")
-        except: st.error("Lỗi quét chart.")
+            else:
+                st.error("Lỗi: Không lưu được vào Database (DB Error).")
+                
+        except subprocess.CalledProcessError as e:
+            status.update(label="❌ Lỗi khi chạy Node.js", state="error")
+            st.markdown("### 🐞 Chi tiết lỗi (Debug Info):")
+            st.code(f"Command: {e.cmd}", language="bash")
+            
+            # Phân tích lỗi phổ biến
+            err_msg = e.stderr
+            if "Cannot find module" in err_msg:
+                st.error("⚠️ Lỗi thiếu thư viện! Có thể `npm install` chưa chạy hoặc thiếu file `package.json`.")
+            elif "429" in err_msg or "Too Many Requests" in err_msg:
+                st.error("⚠️ Google chặn IP! Server Streamlit đang bị Google Play chặn (Rate Limit).")
+            else:
+                st.error(f"Nội dung lỗi:\n{err_msg}")
+                
+        except Exception as e:
+            st.error(f"Lỗi không xác định: {e}")
 
 # --- MAIN VIEW ---
 
