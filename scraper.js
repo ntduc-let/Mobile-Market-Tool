@@ -1,23 +1,15 @@
 const fs = require('fs');
+// Import trực tiếp kiểu cũ (Chuẩn cho v9.1.0)
+const gplay = require('google-play-scraper');
 
-// --- 1. SMART IMPORT ---
-let gplay;
-try {
-    const lib = require('google-play-scraper');
-    if (lib.default) gplay = lib.default;
-    else gplay = lib;
-} catch (e) {
-    console.error("❌ LỖI: Không load được thư viện google-play-scraper");
-    process.exit(1);
-}
-
-// --- 2. CONFIG ---
-// Command: node scraper.js <MODE> <ID/TERM> <COUNTRY> <TOKEN (Optional)>
+// --- CONFIG ---
 const mode = process.argv[2]; 
-const target = process.argv[3]; // Có thể là Category, AppID, hoặc Search Term
+const target = process.argv[3];
 const targetCountry = process.argv[4] || 'vn';
 const targetToken = process.argv[5];
 const targetLang = targetCountry === 'vn' ? 'vi' : 'en';
+
+// ... (Phần code logic bên dưới giữ nguyên) ...
 
 // --- MAIN ROUTER ---
 async function main() {
