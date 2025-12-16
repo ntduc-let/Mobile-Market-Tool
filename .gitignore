@@ -1,0 +1,4 @@
+venv/
+node_modules/
+data/market_data.db
+__pycache__/
