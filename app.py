@@ -273,7 +273,71 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
+# --- BỔ SUNG CSS LIGHTBOX (Dán đoạn này ngay sau block CSS cũ của bạn) ---
+st.markdown("""
+<style>
+    /* 1. Ẩn checkbox đi, chỉ dùng để lưu trạng thái logic */
+    .lightbox-toggle { display: none; }
 
+    /* 2. Container tạo thanh cuộn ngang cho danh sách ảnh */
+    .screenshot-scroll { 
+        overflow-x: auto; 
+        white-space: nowrap; 
+        padding-bottom: 15px;
+        scrollbar-width: thin;
+        -webkit-overflow-scrolling: touch; /* Mượt hơn trên Mac/Touchpad */
+    }
+
+    /* 3. Ảnh Thumbnail (nhỏ) hiển thị trên màn hình */
+    .thumb-label {
+        display: inline-block;
+        margin-right: 12px;
+        cursor: zoom-in;
+        transition: transform 0.2s;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #444;
+    }
+    .thumb-label:hover { transform: scale(1.02); border-color: #64b5f6; }
+    
+    .thumb-img {
+        height: 200px; /* Chiều cao cố định cho hàng ảnh */
+        width: auto;
+        display: block;
+    }
+
+    /* 4. Lớp phủ Fullscreen (Mặc định ẩn) */
+    .lightbox-overlay {
+        display: none; /* Mặc định ẩn */
+        position: fixed;
+        top: 0; left: 0;
+        width: 100vw; height: 100vh;
+        background: rgba(0, 0, 0, 0.95); /* Nền đen đậm */
+        z-index: 999999; /* Luôn nổi lên trên cùng */
+        justify-content: center;
+        align-items: center;
+        cursor: zoom-out;
+        backdrop-filter: blur(5px);
+    }
+
+    /* 5. LOGIC CHÍNH: Khi Input được Check -> Tìm thẻ Overlay nằm cùng cấp và Hiển thị nó */
+    .lightbox-toggle:checked ~ .lightbox-overlay {
+        display: flex;
+        animation: fadeIn 0.2s ease-out;
+    }
+
+    /* 6. Ảnh to bên trong overlay */
+    .full-img {
+        max-width: 95%;
+        max-height: 95%;
+        object-fit: contain;
+        border-radius: 4px;
+        box-shadow: 0 0 30px rgba(0,0,0,0.5);
+    }
+
+    @keyframes fadeIn { from { opacity: 0; transform: scale(0.95); } to { opacity: 1; transform: scale(1); } }
+</style>
+""", unsafe_allow_html=True)
 # --- 6. BACKEND FUNCTIONS ---
 def run_node_safe(mode, target, country, output_file, token=None):
     file_path = f"data/{output_file}"
@@ -654,25 +718,47 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         else: 
                             st.error("Không phản hồi từ Server.")
 
-        # TAB 2: MEDIA
+        # TAB 2: MEDIA (CẬP NHẬT: CHECKBOX HACK AN TOÀN)
         with tab2:
+            # Video Trailer
             if d.get('video'):
                 st.subheader("🎥 Video Trailer")
                 st.video(d.get('video'))
                 st.divider()
             
+            # Screenshots
             if d.get('screenshots'):
                 st.subheader("🖼️ Screenshots")
-                st.caption("💡 Click vào ảnh để phóng to/thu nhỏ.")
+                st.caption("💡 Click vào ảnh để phóng to. Click vào vùng đen để đóng.")
+
+                # Tạo container cuộn ngang
+                html_content = '<div class="screenshot-scroll">'
                 
-                # Vẫn giữ tabindex="0"
-                imgs_html = "".join([
-                    f'<img src="{url}" class="screenshot-img" tabindex="0">' 
-                    for url in d.get('screenshots')
-                ])
+                # Tạo ID cơ sở duy nhất để tránh xung đột giữa các lần render
+                base_id = d.get('appId', 'unknown').replace('.', '_')
                 
-                st.markdown(f'<div class="screenshot-container">{imgs_html}</div>', unsafe_allow_html=True)
-            else: st.info("Không có ảnh chụp màn hình.")
+                for i, url in enumerate(d.get('screenshots')):
+                    # Mỗi ảnh có 1 ID riêng biệt
+                    unique_id = f"img_{base_id}_{i}"
+                    
+                    html_content += f"""
+                    <div style="display:inline-block;">
+                        <input type="checkbox" id="{unique_id}" class="lightbox-toggle">
+                        
+                        <label for="{unique_id}" class="thumb-label">
+                            <img src="{url}" class="thumb-img" loading="lazy">
+                        </label>
+                        
+                        <label for="{unique_id}" class="lightbox-overlay">
+                            <img src="{url}" class="full-img">
+                        </label>
+                    </div>
+                    """
+                
+                html_content += '</div>'
+                st.markdown(html_content, unsafe_allow_html=True)
+            else: 
+                st.info("Không có ảnh chụp màn hình.")
 
         # TAB 3: DATA SAFETY (HOÀN TOÀN MỚI)
         with tab3:
