@@ -650,32 +650,39 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                     else: st.success("✅ Không thu thập dữ liệu người dùng.")
             else: st.info("Nhà phát triển không cung cấp thông tin an toàn dữ liệu.")
 
-        # TAB 4: SIMILAR (Code cũ, chỉ đổi vị trí tab)
+        # --- TAB 4: SIMILAR (ĐÃ FIX LỖI NAME ERROR) ---
         with tab4:
-            # 1. Lọc bỏ chính App hiện tại ra khỏi danh sách (tránh hiện lại chính nó)
+            # Lấy App ID hiện tại để lọc trùng
             current_id = d.get('appId')
+            # Lấy quốc gia trực tiếp từ session_state để tránh lỗi biến
+            country_code = st.session_state.selected_app.get('country_override', 'vn')
+
+            # Lọc bỏ chính App đang xem ra khỏi danh sách đối thủ
             sims = [s for s in st.session_state.similar_apps if s.get('appId') != current_id]
             
             if sims:
                 cols = st.columns(3)
-                # Chỉ hiển thị tối đa 9 ứng dụng đối thủ
                 for i, s in enumerate(sims[:9]):
                     with cols[i % 3]:
-                        # Sử dụng hàm render có sẵn
-                        render_mini_card(s, sapp['country_override'], i, "sim")
+                        # Thay 'sapp' bằng 'country_code'
+                        render_mini_card(s, country_code, i, "sim")
             else:
-                st.info("⚠️ Không tìm thấy đối thủ hoặc ứng dụng tương tự nào từ Google Play.")
+                st.info("⚠️ Không tìm thấy đối thủ hoặc ứng dụng tương tự nào.")
 
-        # TAB 5: CÙNG DEV (NÊN CẬP NHẬT LUÔN)
+        # --- TAB 5: CÙNG DEV (ĐÃ FIX LỖI NAME ERROR) ---
         with tab5:
             current_id = d.get('appId')
+            country_code = st.session_state.selected_app.get('country_override', 'vn')
+
+            # Lọc bỏ chính App đang xem
             devs = [dv for dv in st.session_state.dev_apps if dv.get('appId') != current_id]
             
             if devs:
                 cols = st.columns(3)
                 for i, dv in enumerate(devs[:9]):
                     with cols[i % 3]:
-                        render_mini_card(dv, sapp['country_override'], i, "dev")
+                        # Thay 'sapp' bằng 'country_code'
+                        render_mini_card(dv, country_code, i, "dev")
             else:
                 st.info("Nhà phát triển này chỉ có 1 ứng dụng này trên Store.")
 
