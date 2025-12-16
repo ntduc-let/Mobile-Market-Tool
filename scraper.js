@@ -23,18 +23,15 @@ const targetCountry = process.argv[4] || 'vn';
 const targetToken = process.argv[5];
 const targetLang = targetCountry === 'vn' ? 'vi' : 'en';
 
-// Khai báo biến global để dùng chung
 let gplay;
 
 // --- 3. MAIN ROUTER ---
 async function main() {
     try {
-        // [QUAN TRỌNG] FIX LỖI ERR_REQUIRE_ESM
-        // Thay vì require(), ta dùng dynamic import()
         const gplayModule = await import('google-play-scraper');
         gplay = gplayModule.default;
 
-        // Router xử lý các mode
+        // [UPDATE] Đã bổ sung MORE_REVIEWS vào router
         if (mode === 'LIST') {
             await scrapeCategoryList();
         } else if (mode === 'DETAIL') {
@@ -45,6 +42,8 @@ async function main() {
              await scrapeSimilar();
         } else if (mode === 'DEVELOPER') {
              await scrapeDeveloper();
+        } else if (mode === 'MORE_REVIEWS') {
+             await scrapeMoreReviews();
         }
 
     } catch (e) {
@@ -57,19 +56,12 @@ async function main() {
 
 async function scrapeCategoryList() {
     console.log(`Scraping List: ${target} in ${targetCountry}`);
-    
     const fetchList = async (collection) => {
         try {
             return await gplay.list({
-                category: target,
-                collection: collection,
-                num: 20,
-                country: targetCountry,
-                lang: targetLang
+                category: target, collection: collection, num: 20, country: targetCountry, lang: targetLang
             });
-        } catch (e) { 
-            return []; 
-        }
+        } catch (e) { return []; }
     };
 
     const [free, paid, gross] = await Promise.all([
@@ -80,12 +72,7 @@ async function scrapeCategoryList() {
 
     let allApps = [];
     const push = (l, t) => l?.forEach((a, i) => allApps.push({
-        ...a, 
-        category: target, 
-        country: targetCountry, 
-        collection_type: t, 
-        rank: i+1,
-        icon: a.icon || "" 
+        ...a, category: target, country: targetCountry, collection_type: t, rank: i+1, icon: a.icon || "" 
     }));
 
     push(free, 'top_free');
@@ -96,8 +83,10 @@ async function scrapeCategoryList() {
 }
 
 async function scrapeAppDetail() {
+    // 1. Lấy thông tin cơ bản
     const d = await gplay.app({ appId: target, lang: targetLang, country: targetCountry });
     
+    // 2. Lấy thêm Reviews (vì mặc định trả về ít)
     try {
         const reviews = await gplay.reviews({
             appId: target, sort: gplay.sort.NEWEST, num: 40, lang: targetLang, country: targetCountry
@@ -106,10 +95,19 @@ async function scrapeAppDetail() {
         d.nextToken = reviews.nextPaginationToken;
     } catch (e) { d.comments = []; }
     
+    // 3. Lấy Permissions (ngắn gọn)
     try {
         const perms = await gplay.permissions({ appId: target, lang: targetLang, short: true });
         d.permissions = perms;
     } catch (e) {}
+
+    // [UPDATE] 4. Lấy Data Safety (Quan trọng cho Full Features)
+    try {
+        const safety = await gplay.datasafety({ appId: target, lang: targetLang, country: targetCountry });
+        d.dataSafety = safety;
+    } catch (e) { 
+        d.dataSafety = { sharedData: [], collectedData: [] }; // Fallback
+    }
 
     fs.writeFileSync('data/app_detail.json', JSON.stringify(d));
 }
@@ -129,36 +127,22 @@ async function scrapeDeveloper() {
     fs.writeFileSync('data/developer_apps.json', JSON.stringify(s));
 }
 
-// === 5. LOAD MORE REVIEWS (ĐÃ FIX LỖI CRASH) ===
 async function scrapeMoreReviews() {
     console.log(`🚀 More Reviews: Token length ${targetToken ? targetToken.length : 0}`);
     try {
         if (!targetToken) throw new Error("Token phân trang bị rỗng (Undefined)");
 
         const reviewsResult = await gplay.reviews({
-            appId: target, 
-            sort: gplay.sort.NEWEST, 
-            num: 40, 
-            lang: targetLang, 
-            country: targetCountry,
-            nextPaginationToken: targetToken
+            appId: target, sort: gplay.sort.NEWEST, num: 40, lang: targetLang, country: targetCountry, nextPaginationToken: targetToken
         });
 
-        saveJSON('more_reviews.json', { 
-            comments: reviewsResult.data || [], 
-            nextToken: reviewsResult.nextPaginationToken 
-        });
+        const output = { comments: reviewsResult.data || [], nextToken: reviewsResult.nextPaginationToken };
+        fs.writeFileSync('data/more_reviews.json', JSON.stringify(output));
 
     } catch (e) { 
         console.error(`⚠️ Lỗi tải review: ${e.message}`);
-        // Thay vì exit(1), ta lưu file kết quả rỗng kèm thông báo lỗi để App không bị đơ
-        saveJSON('more_reviews.json', { 
-            comments: [], 
-            nextToken: null, // Reset token để ẩn nút tải thêm
-            error: e.message 
-        });
+        fs.writeFileSync('data/more_reviews.json', JSON.stringify({ comments: [], nextToken: null, error: e.message }));
     }
 }
 
-// Chạy hàm main
 main();
