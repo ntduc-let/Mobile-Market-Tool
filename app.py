@@ -711,42 +711,41 @@ elif st.session_state.view_mode == 'detail' and st.session_state.selected_app:
                         else: 
                             st.error("Không phản hồi từ Server.")
 
-        # --- BƯỚC 2: THAY THẾ TOÀN BỘ CODE TRONG TAB 2 ---
+        # --- TAB 2: MEDIA (FIX LỖI HIỂN THỊ CODE HTML) ---
         with tab2:
-            # 1. Video (Giữ nguyên)
+            # 1. Video
             if d.get('video'):
                 st.subheader("🎥 Video Trailer")
                 st.video(d.get('video'))
                 st.divider()
             
-            # 2. Screenshots (Logic mới: An toàn & Mượt mà)
+            # 2. Screenshots (Đã fix lỗi hiển thị text)
             if d.get('screenshots'):
                 st.subheader("🖼️ Screenshots")
                 st.caption("💡 Click ảnh để phóng to. Click vùng đen để đóng.")
 
+                # Chuẩn bị HTML - Viết liền 1 dòng hoặc dùng textwrap để tránh lỗi Markdown hiểu nhầm là Code Block
                 html_content = '<div class="screenshot-scroll">'
                 
-                # Tạo ID cơ sở để checkbox hoạt động độc lập
                 base_id = d.get('appId', 'app').replace('.', '_')
                 
                 for i, url in enumerate(d.get('screenshots')):
                     unique_id = f"img_{base_id}_{i}"
                     
-                    html_content += f"""
-                    <div style="display:inline-block;">
-                        <input type="checkbox" id="{unique_id}" class="lightbox-toggle">
-                        
-                        <label for="{unique_id}" class="thumb-label">
-                            <img src="{url}" class="thumb-img" loading="lazy">
-                        </label>
-                        
-                        <label for="{unique_id}" class="lightbox-overlay">
-                            <img src="{url}" class="full-img">
-                        </label>
-                    </div>
-                    """
+                    # QUAN TRỌNG: F-string được viết sát lề trái để tránh khoảng trắng thừa
+                    html_content += f"""<div style="display:inline-block; margin-right:10px;">
+<input type="checkbox" id="{unique_id}" class="lightbox-toggle">
+<label for="{unique_id}" class="thumb-label">
+<img src="{url}" class="thumb-img" loading="lazy">
+</label>
+<label for="{unique_id}" class="lightbox-overlay">
+<img src="{url}" class="full-img">
+</label>
+</div>"""
                 
                 html_content += '</div>'
+                
+                # QUAN TRỌNG NHẤT: Phải có unsafe_allow_html=True
                 st.markdown(html_content, unsafe_allow_html=True)
             else: 
                 st.info("Không có ảnh chụp màn hình.")
