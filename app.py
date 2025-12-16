@@ -448,40 +448,85 @@ st.sidebar.markdown("---")
 st.sidebar.subheader("📊 Top Charts")
 sel_country_lbl = st.sidebar.selectbox("Quốc Gia", list(COUNTRIES_LIST.keys()))
 sel_cat_lbl = st.sidebar.selectbox("Thể Loại", list(CATEGORIES_LIST.keys()))
+
+# [UPDATE] Thêm thanh trượt chọn số lượng
+limit_num = st.sidebar.slider("Số lượng App", min_value=10, max_value=120, value=30, step=10)
+
 target_country = COUNTRIES_LIST[sel_country_lbl]
 target_cat = CATEGORIES_LIST[sel_cat_lbl]
 
 if st.sidebar.button("🚀 Quét Chart", type="primary"):
-    with st.status("Đang quét..."):
+    with st.status("Đang quét dữ liệu thị trường..."):
         try:
-            subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country], check=True, timeout=120)
-            if save_data_to_db(target_cat, target_country):
+            # [UPDATE] Truyền thêm limit_num (dạng string) vào tham số cuối
+            subprocess.run(["node", NODE_SCRIPT, "LIST", target_cat, target_country, str(limit_num)], check=True, timeout=120)
+            
+            # Hàm save_data_to_db cần đọc file raw_data.json mới
+            if save_data_to_db(target_cat, target_country): # Bạn cần sửa nhẹ hàm này nếu muốn lưu full field, nhưng hiện tại vẫn chạy tốt
                 st.session_state.view_mode = 'list'
                 st.rerun()
             else: st.error("Không lưu được DB.")
         except subprocess.TimeoutExpired:
-             st.error("Timeout! Quá trình quét mất quá nhiều thời gian.")
+             st.error("Timeout! Giảm số lượng App xuống và thử lại.")
         except Exception as e: 
              st.error(f"Lỗi: {e}")
 
 # --- 9. MAIN VIEW ---
 
 # A. LIST VIEW
+# A. LIST VIEW (CẬP NHẬT: THÊM DẠNG BẢNG & APP MỚI)
 if st.session_state.view_mode == 'list':
     st.title(f"📊 Market: {sel_cat_lbl} ({sel_country_lbl})")
-    df = load_data_today(target_cat, target_country)
+    
+    # Load data
+    df = load_data_today(CATEGORIES_LIST[sel_cat_lbl], COUNTRIES_LIST[sel_country_lbl]) # Đảm bảo biến khớp với sidebar
+    
     if not df.empty:
-        c1, c2, c3 = st.columns(3)
-        with c1: 
-            st.subheader("🔥 Top Free")
-            for i, (_, r) in enumerate(df[df['collection_type']=='top_free'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tf")
-        with c2: 
-            st.subheader("💸 Top Paid")
-            for i, (_, r) in enumerate(df[df['collection_type']=='top_paid'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tp")
-        with c3: 
-            st.subheader("💰 Grossing")
-            for i, (_, r) in enumerate(df[df['collection_type']=='top_grossing'].sort_values('rank').head(20).iterrows()): render_mini_card(r, target_country, i, "tg")
-    else: st.info("👋 Chưa có data. Hãy bấm Quét Chart.")
+        # Chọn chế độ xem
+        view_type = st.radio("Chế độ xem:", ["📱 Dạng Thẻ (Grid)", "📄 Dạng Bảng (Table)"], horizontal=True)
+        st.divider()
+
+        if view_type == "📱 Dạng Thẻ (Grid)":
+            # Tab phân loại bộ sưu tập
+            t1, t2, t3, t4, t5 = st.tabs(["🔥 Top Free", "💸 Top Paid", "💰 Grossing", "✨ New Free", "💎 New Paid"])
+            
+            def render_grid(collection_name, key_suffix):
+                subset = df[df['collection_type'] == collection_name].sort_values('rank')
+                if not subset.empty:
+                    cols = st.columns(3) # Grid 3 cột
+                    for i, r in enumerate(subset.to_dict('records')):
+                         with cols[i % 3]:
+                             render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
+                else: st.info("Không có dữ liệu cho mục này.")
+
+            with t1: render_grid('top_free', 'tf')
+            with t2: render_grid('top_paid', 'tp')
+            with t3: render_grid('top_grossing', 'tg')
+            with t4: render_grid('new_free', 'nf')
+            with t5: render_grid('new_paid', 'np')
+
+        else: # Dạng Bảng (Table View) - Rất tốt để so sánh chỉ số
+            st.markdown("### 📋 Bảng tổng hợp chi tiết")
+            
+            # Chuẩn bị dữ liệu hiển thị đẹp hơn
+            df_display = df.copy()
+            df_display = df_display[['rank', 'title', 'developer', 'score', 'price', 'collection_type']]
+            df_display.columns = ['Rank', 'Tên App', 'Nhà phát triển', 'Điểm', 'Giá', 'Bộ sưu tập']
+            
+            # Sử dụng Dataframe tương tác của Streamlit
+            st.dataframe(
+                df_display,
+                use_container_width=True,
+                hide_index=True,
+                column_config={
+                    "Rank": st.column_config.NumberColumn("Hạng", format="#%d"),
+                    "Điểm": st.column_config.ProgressColumn("Rating", min_value=0, max_value=5, format="%.1f"),
+                    "Giá": st.column_config.NumberColumn("Giá (VND)", format="%.0f ₫"),
+                    "Bộ sưu tập": st.column_config.TextColumn("Nhóm", width="medium"),
+                }
+            )
+    else: 
+        st.info("👋 Chưa có dữ liệu ngày hôm nay. Hãy chọn số lượng và bấm '🚀 Quét Chart' ở thanh bên.")
 
 # B. SEARCH RESULTS
 elif st.session_state.view_mode == 'search_results':

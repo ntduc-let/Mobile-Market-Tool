@@ -55,29 +55,50 @@ async function main() {
 // --- CÁC HÀM XỬ LÝ LOGIC ---
 
 async function scrapeCategoryList() {
-    console.log(`Scraping List: ${target} in ${targetCountry}`);
+    // Sử dụng biến targetToken (tham số thứ 5) để làm số lượng (num). Mặc định 50.
+    const limit = parseInt(targetToken) || 50;
+    
+    console.log(`Scraping List: ${target} in ${targetCountry} (Limit: ${limit})`);
+    
     const fetchList = async (collection) => {
         try {
             return await gplay.list({
-                category: target, collection: collection, num: 20, country: targetCountry, lang: targetLang
+                category: target,
+                collection: collection,
+                num: limit, // Số lượng tùy chỉnh
+                country: targetCountry,
+                lang: targetLang
             });
-        } catch (e) { return []; }
+        } catch (e) { 
+            console.error(`Error fetching ${collection}: ${e.message}`);
+            return []; 
+        }
     };
 
-    const [free, paid, gross] = await Promise.all([
+    // Quét song song 5 bảng xếp hạng (Thêm New Free & New Paid)
+    const [free, paid, gross, new_free, new_paid] = await Promise.all([
         fetchList(gplay.collection.TOP_FREE),
         fetchList(gplay.collection.TOP_PAID),
-        fetchList(gplay.collection.GROSSING)
+        fetchList(gplay.collection.GROSSING),
+        fetchList(gplay.collection.TOP_FREE_NEW), // Mới
+        fetchList(gplay.collection.TOP_PAID_NEW)  // Mới
     ]);
 
     let allApps = [];
     const push = (l, t) => l?.forEach((a, i) => allApps.push({
-        ...a, category: target, country: targetCountry, collection_type: t, rank: i+1, icon: a.icon || "" 
+        ...a, 
+        category: target, 
+        country: targetCountry, 
+        collection_type: t, 
+        rank: i+1,
+        icon: a.icon || "" 
     }));
 
     push(free, 'top_free');
     push(paid, 'top_paid');
     push(gross, 'top_grossing');
+    push(new_free, 'new_free');
+    push(new_paid, 'new_paid');
     
     fs.writeFileSync('data/raw_data.json', JSON.stringify(allApps));
 }
