@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from .components import render_mini_card
 from .backend import run_node_safe
 from .config import COUNTRIES_LIST
+import textwrap
 
 def render_list_view(df, sel_country_lbl):
     if not df.empty:
@@ -95,7 +96,7 @@ def render_detail_view(target_cat_default):
         badges_html += '<span class="h-tag tag-iap">In-App Purchases</span>'
 
     # 3. Tạo HTML Header
-    header_html = f"""
+    header_html = textwrap.dedent(f"""
     <div class="back-btn-container"></div>
     <div class="hero-container">
         <div class="hero-bg" style="background-image: url('{bg_url}');"></div>
@@ -114,9 +115,9 @@ def render_detail_view(target_cat_default):
             </div>
         </div>
     </div>
-    """
+    """)
     
-    # Render nút Back (Streamlit Native) nhưng nằm trên cùng
+    # Render nút Back
     col_back, col_space = st.columns([1, 10])
     with col_back:
         st.button("⬅️ Back", on_click=lambda: st.session_state.update(view_mode='list'), use_container_width=True)
