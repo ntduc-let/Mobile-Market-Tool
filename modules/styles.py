@@ -105,16 +105,16 @@ def load_css():
             top: 50% !important;
             left: 50% !important;
             transform: translate(-50%, -50%) !important; /* Căn giữa tuyệt đối */
-            
+
             width: 95vw !important;      /* Chiếm 95% chiều ngang màn hình */
             height: 95vh !important;     /* Chiếm 95% chiều dọc màn hình */
-            
+
             max-width: none !important;  /* Gỡ bỏ mọi giới hạn chiều rộng */
             max-height: none !important; /* Gỡ bỏ mọi giới hạn chiều cao */
-            
+
             object-fit: contain !important; /* Đảm bảo ảnh không bị méo */
             z-index: 1000000 !important;    /* Đảm bảo luôn nằm trên cùng */
-            
+
             background-color: transparent;  /* Nền trong suốt */
             box-shadow: none !important;    /* Bỏ bóng đổ nếu có */
         }
@@ -173,5 +173,51 @@ def load_css():
         }
         .dev-reply-header { font-size: 0.85em; font-weight: 700; color: #64b5f6; margin-bottom: 5px; display: flex; justify-content: space-between; }
         .dev-reply-text { font-size: 0.9em; color: #cbd5e0; font-style: italic; }
-    </style>
+
+        /* --- DATA SAFETY STYLES (NEW) --- */
+        
+        /* 1. Khung chứa Security Practices (Màu xanh bảo mật) */
+        .security-box {
+            background-color: rgba(27, 94, 32, 0.15); /* Nền xanh lá nhạt */
+            border: 1px solid #2e7d32;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+        }
+        .sec-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            margin-bottom: 8px;
+            color: #e8f5e9;
+            font-size: 0.95em;
+        }
+        .sec-icon { color: #69f0ae; font-size: 1.2em; margin-top: 2px; }
+    
+        /* 2. Thẻ dữ liệu chi tiết (Data Card) */
+        .data-item-card {
+            background-color: #23252e;
+            border: 1px solid #3a3f4b;
+            border-radius: 10px;
+            padding: 12px;
+            margin-bottom: 10px;
+            transition: all 0.2s;
+        }
+        .data-item-card:hover { border-color: #64b5f6; background-color: #2a2d36; }
+        
+        .data-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
+        .data-name { font-weight: 700; color: #fff; font-size: 0.95em; }
+        .data-type { color: #aaa; font-size: 0.85em; font-style: italic; }
+        
+        .data-purpose { 
+            font-size: 0.85em; color: #ccc; 
+            background: rgba(255,255,255,0.05); 
+            padding: 6px; border-radius: 6px; margin-top: 6px; 
+            line-height: 1.4;
+        }
+    
+        /* 3. Badges trạng thái */
+        .badge-req { background: rgba(255, 75, 75, 0.2); color: #ff8a80; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(255, 75, 75, 0.3); }
+        .badge-opt { background: rgba(105, 240, 174, 0.2); color: #b9f6ca; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(105, 240, 174, 0.3); }
+        </style>
     """, unsafe_allow_html=True)
