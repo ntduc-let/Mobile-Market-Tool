@@ -73,5 +73,62 @@ def load_css():
         .lightbox-toggle:checked ~ .lightbox-overlay { display: flex; animation: fadeIn 0.2s ease-out; }
         .full-img { width: 98vw; height: 98vh; object-fit: contain; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+                
+        /* --- Dashboard Header Style --- */
+        .dashboard-header-container {
+            background: linear-gradient(90deg, #1e222b 0%, #262a35 100%);
+            padding: 25px 30px;
+            border-radius: 16px;
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+            margin-bottom: 25px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .header-sub {
+            text-transform: uppercase;
+            font-size: 0.85rem;
+            letter-spacing: 1.5px;
+            font-weight: 700;
+            color: #64b5f6; /* Màu xanh dương nhạt */
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .header-main {
+            font-size: 2rem; /* Chữ to */
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.2;
+            background: -webkit-linear-gradient(45deg, #ffffff, #e0e0e0);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .header-badges {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+            flex-wrap: wrap;
+        }
+
+        .h-badge {
+            background: rgba(255, 255, 255, 0.05);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 6px 14px;
+            border-radius: 50px;
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #e0e0e0;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .h-badge.country { border-color: #ff4b4b; color: #ffbcbc; background: rgba(255, 75, 75, 0.1); }
+        .h-badge.category { border-color: #4caf50; color: #b9f6ca; background: rgba(76, 175, 80, 0.1); }
     </style>
     """, unsafe_allow_html=True)

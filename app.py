@@ -54,7 +54,21 @@ if st.sidebar.button("🚀 Quét Chart", type="primary"):
 
 # 4. Main Router
 if st.session_state.view_mode == 'list':
-    st.title(f"📊 Market: {sel_cat_lbl} ({sel_country_lbl})")
+    st.markdown(f"""
+    <div class="dashboard-header-container">
+        <div class="header-sub">
+            <span>🚀 MARKET MONITOR INTELLIGENCE</span>
+        </div>
+        <div class="header-main">
+            Thị trường Ứng dụng Di động
+        </div>
+        <div class="header-badges">
+            <span class="h-badge category">{sel_cat_lbl}</span>
+            <span class="h-badge country">{sel_country_lbl}</span>
+        </div>
+    </div>
+    """, unsafe_allow_html=True)
+    # ----------------------------
     df = load_data_today(CATEGORIES_LIST[sel_cat_lbl], COUNTRIES_LIST[sel_country_lbl])
     render_list_view(df, sel_country_lbl)
 
