@@ -60,9 +60,12 @@ def render_detail_view(target_cat_default):
                 st.session_state.detail_country = curr_country
                 st.session_state.similar_apps = run_node_safe("SIMILAR", target_id, curr_country, "similar_apps.json") or []
                 
-                if d.get('developerId'): 
-                    st.session_state.dev_apps = run_node_safe("DEVELOPER", str(d.get('developerId')), curr_country, "developer_apps.json") or []
-
+                dev_target = d.get('developerId') or d.get('developer')
+                
+                if dev_target: 
+                    st.session_state.dev_apps = run_node_safe("DEVELOPER", str(dev_target), curr_country, "developer_apps.json") or []
+                else:
+                    st.session_state.dev_apps = []
     d = st.session_state.detail_data
     if not d: return
 
@@ -440,12 +443,31 @@ def render_detail_view(target_cat_default):
                              with cols_raw[i % 3]:
                                  render_mini_card(s, country_code, i, "raw_sim")
     
-    with tab5: # Dev Apps
-        if st.session_state.dev_apps:
-            cols = st.columns(3)
-            clean_devs = [dv for dv in st.session_state.dev_apps if dv.get('appId') != target_id]
-            for i, dv in enumerate(clean_devs):
-                with cols[i%3]: render_mini_card(dv, curr_country, i, "dev")
+    # --- TAB 5: CÙNG DEV---
+    with tab5:
+        # 1. Kiểm tra có dữ liệu thô không
+        if not st.session_state.dev_apps:
+            st.info(f"📭 Không tìm thấy ứng dụng nào khác của **{d.get('developer')}**.")
+        else:
+            target_id = d.get('appId')
+            
+            # 2. Lọc bỏ chính ứng dụng đang xem
+            other_apps = [dv for dv in st.session_state.dev_apps if dv.get('appId') != target_id]
+            
+            if other_apps:
+                st.caption(f"📂 Tìm thấy **{len(other_apps)}** ứng dụng khác cùng nhà phát hành.")
+                
+                # Grid 3 cột
+                cols = st.columns(3)
+                # Lấy country code an toàn
+                country_code = st.session_state.selected_app.get('country_override', 'vn')
+                
+                for i, dv in enumerate(other_apps):
+                    with cols[i % 3]:
+                        render_mini_card(dv, country_code, i, "dev")
+            else:
+                # Trường hợp danh sách trả về chỉ có duy nhất 1 app là chính nó
+                st.warning(f"⚠️ Nhà phát triển **{d.get('developer')}** chỉ có duy nhất ứng dụng này trên cửa hàng.")
 
     with tab6: # Info
         c_tech, c_cat = st.columns(2)
