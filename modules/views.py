@@ -494,14 +494,14 @@ def render_detail_view(target_cat_default):
         cards_html = ""
         for s in specs:
             cards_html += f"""
-            <div class="tech-card">
-                <div class="tc-icon-box {s['color']}">{s['icon']}</div>
-                <div class="tc-content">
-                    <span class="tc-label">{s['label']}</span>
-                    <span class="tc-value" title="{s['val']}">{s['val']}</span>
-                </div>
-            </div>
-            """
+<div class="tech-card">
+<div class="tc-icon-box {s['color']}">{s['icon']}</div>
+<div class="tc-content">
+<span class="tc-label">{s['label']}</span>
+<span class="tc-value" title="{s['val']}">{s['val']}</span>
+</div>
+</div>
+"""
             
             # Render Grid
             final_html = f'<div class="tech-grid">{cards_html}</div>'
