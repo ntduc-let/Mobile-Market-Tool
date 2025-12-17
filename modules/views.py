@@ -403,6 +403,9 @@ def render_detail_view(target_cat_default):
             current_id = d.get('appId')
             current_dev = d.get('developer', '').lower().strip()
             
+            # [FIX QUAN TRỌNG] Lấy country_code ngay từ đầu để dùng cho cả if và else
+            country_code = st.session_state.selected_app.get('country_override', 'vn')
+
             # 1. Kiểm tra dữ liệu đầu vào
             if not st.session_state.similar_apps:
                 st.info("⚠️ Không tìm thấy danh sách ứng dụng tương tự từ Google Play.")
@@ -413,8 +416,6 @@ def render_detail_view(target_cat_default):
                     s_id = s.get('appId')
                     s_dev = s.get('developer', '').lower().strip()
                     
-                    # Giữ lại nếu ID khác nhau VÀ Developer khác nhau
-                    # (Dùng 'not in' để lọc các biến thể tên Dev, ví dụ: "Garena" vs "Garena International")
                     if s_id != current_id and (current_dev not in s_dev):
                         real_competitors.append(s)
 
@@ -422,9 +423,8 @@ def render_detail_view(target_cat_default):
                 if real_competitors:
                     st.caption(f"🎯 Hiển thị **{len(real_competitors)}** đối thủ cạnh tranh (Đã lọc bỏ App cùng nhà phát hành).")
                     
-                    # Grid 3 cột
                     cols = st.columns(3)
-                    country_code = st.session_state.selected_app.get('country_override', 'vn')
+                    # (Dòng country_code cũ ở đây đã được đưa lên đầu rồi)
                     
                     for i, s in enumerate(real_competitors):
                         with cols[i % 3]:
@@ -433,7 +433,7 @@ def render_detail_view(target_cat_default):
                     # Trường hợp Google trả về data nhưng toàn là App cùng nhà -> Bị lọc hết
                     st.warning(f"⚠️ Google Play có gợi ý ứng dụng tương tự, nhưng tất cả đều thuộc cùng nhà phát triển '{d.get('developer')}'.")
                     
-                    # [Tùy chọn] Hiển thị luôn danh sách chưa lọc để người dùng tham khảo
+                    # Bây giờ country_code đã tồn tại, không còn lỗi nữa
                     with st.expander("Xem danh sách chưa lọc"):
                          cols_raw = st.columns(3)
                          for i, s in enumerate(st.session_state.similar_apps[:6]):
