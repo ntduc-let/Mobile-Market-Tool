@@ -215,14 +215,9 @@ def render_detail_view(target_cat_default):
             likes = r.get('thumbsUp', 0)
             version = r.get('version', '')
             
-            # Xử lý ngày tháng: Ưu tiên dùng replyDate (thường chuẩn ISO) để tính giờ, 
-            # nếu không có thì dùng date (text)
-            # Lưu ý: 'date' của review thường Google trả về text (Sep 12, 2024), khó convert chính xác giờ.
-            # Nhưng 'replyDate' (khi Dev trả lời) luôn là ISO chuẩn. 
-            
-            # Tuy nhiên, ở đây ta cứ hiển thị 'date' gốc của review (vì nó là text).
-            # Còn 'replyDate' của Dev thì ta convert theo múi giờ quốc gia.
-            date_display = r.get('date', '')
+            # Gọi hàm format cho cả user date
+            raw_date = r.get('date', '')
+            date_display = format_date_by_country(raw_date, curr_country)
 
             reply_text = r.get('replyText')
             raw_reply_date = r.get('replyDate', '')
