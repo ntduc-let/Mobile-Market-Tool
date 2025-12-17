@@ -58,8 +58,10 @@ def render_detail_view(target_cat_default):
                 st.session_state.next_token = d.get('nextToken', None)
                 st.session_state.detail_id = target_id
                 st.session_state.detail_country = curr_country
-                run_node_safe("SIMILAR", target_id, curr_country, "similar_apps.json")
-                if d.get('developerId'): run_node_safe("DEVELOPER", str(d.get('developerId')), curr_country, "developer_apps.json")
+                st.session_state.similar_apps = run_node_safe("SIMILAR", target_id, curr_country, "similar_apps.json") or []
+                
+                if d.get('developerId'): 
+                    st.session_state.dev_apps = run_node_safe("DEVELOPER", str(d.get('developerId')), curr_country, "developer_apps.json") or []
 
     d = st.session_state.detail_data
     if not d: return
