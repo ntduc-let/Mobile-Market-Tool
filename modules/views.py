@@ -484,8 +484,15 @@ def render_detail_view(target_cat_default):
             try:
                 # Nếu dữ liệu là số (int/float)
                 if isinstance(ts, (int, float)):
-                    # Timestamp của Google là miliseconds, cần chia 1000 để ra seconds
-                    return datetime.fromtimestamp(ts / 1000).strftime("%d/%m/%Y")
+                    # 1. Chuyển timestamp thành đối tượng datetime
+                    dt = datetime.fromtimestamp(ts / 1000)
+                    
+                    # 2. Format thủ công để có chữ "thg"
+                    # dt.strftime('%d') -> Ngày (08)
+                    # dt.month -> Tháng (9 - không số 0 ở đầu)
+                    # dt.year -> Năm (2025)
+                    return f"{dt.strftime('%d')} thg {dt.month}, {dt.year}"
+                
                 return str(ts) if ts else "N/A"
             except:
                 return "N/A"
