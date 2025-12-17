@@ -80,47 +80,27 @@ def render_detail_view(target_cat_default):
     
     # 2. Xử lý Badges (Thẻ)
     badges_html = ""
+    if d.get('free'): badges_html += '<span class="h-tag tag-free">Free</span>'
+    else: badges_html += f'<span class="h-tag tag-paid">{d.get("price", 0):,.0f} đ</span>'
     
-    # Thẻ Giá tiền
-    if d.get('free'):
-        badges_html += '<span class="h-tag tag-free">Free</span>'
-    else:
-        price = d.get('price', 0)
-        price_txt = f"{price:,.0f} đ" if price else "Paid"
-        badges_html += f'<span class="h-tag tag-paid">{price_txt}</span>'
-
-    # Thẻ Quảng cáo & IAP
-    if d.get('adSupported'): 
-        badges_html += '<span class="h-tag tag-ads">Contains Ads</span>'
-    if d.get('offersIAP'): 
-        badges_html += '<span class="h-tag tag-iap">In-App Purchases</span>'
+    if d.get('adSupported'): badges_html += '<span class="h-tag tag-ads">Ads</span>'
+    if d.get('offersIAP'): badges_html += '<span class="h-tag tag-iap">IAP</span>'
 
     # 3. Tạo HTML Header
     header_html = textwrap.dedent(f"""
-    <div class="back-btn-container"></div>
     <div class="hero-container">
         <div class="hero-bg" style="background-image: url('{bg_url}');"></div>
         <div class="hero-overlay"></div>
-        
         <div class="hero-content">
             <img src="{icon_url}" class="hero-icon-big">
             <div class="hero-text-col">
                 <div class="hero-title">{title}</div>
-                <div class="hero-dev">
-                    👨‍💻 {dev_name}
-                </div>
-                <div class="hero-badges">
-                    {badges_html}
-                </div>
+                <div class="hero-dev">👨‍💻 {dev_name}</div>
+                <div class="hero-badges">{badges_html}</div>
             </div>
         </div>
     </div>
     """)
-    
-    # Render nút Back
-    col_back, col_space = st.columns([1, 10])
-    with col_back:
-        st.button("⬅️ Back", on_click=lambda: st.session_state.update(view_mode='list'), use_container_width=True)
     
     # Render Header HTML
     st.markdown(header_html, unsafe_allow_html=True)
