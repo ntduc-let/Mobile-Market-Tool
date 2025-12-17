@@ -10,13 +10,15 @@ def load_css():
         /* --- 1. CARD TOP (INFO PART) --- */
         .app-card-top {
             background: linear-gradient(145deg, #1e2028, #242730);
-            border-radius: 16px 16px 0 0; /* Chỉ bo góc trên */
+            /* Chỉ bo góc trên trái và trên phải */
+            border-radius: 16px 16px 0 0; 
             padding: 16px 20px;
-            margin-bottom: 0px !important; /* Xóa khoảng cách dưới */
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-bottom: none; /* Bỏ viền dưới để nối với nút */
             
-            /* Grid Layout */
+            /* Xóa khoảng cách dưới để nối với nút */
+            margin-bottom: 0px !important; 
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-bottom: 1px solid rgba(255,255,255,0.05); /* Viền mờ ngăn cách nhẹ */
+            
             display: grid;
             grid-template-columns: 50px 80px 1fr;
             gap: 20px;
@@ -24,68 +26,54 @@ def load_css():
         }
 
         /* --- 2. CARD ELEMENTS --- */
-        .rank-badge { 
-            font-size: 1.8em; font-weight: 900; text-align: center; opacity: 0.9; 
-            font-family: 'Segoe UI', sans-serif;
-        }
-        
-        .app-icon-opt { 
-            width: 80px; height: 80px; 
-            border-radius: 18px; object-fit: cover; 
-            box-shadow: 0 4px 8px rgba(0,0,0,0.3); 
-        }
-
-        .app-info-col { 
-            display: flex; flex-direction: column; gap: 6px; overflow: hidden; justify-content: center;
-        }
-        
-        .app-title-opt { 
-            font-size: 1.25em; font-weight: 700; color: #fff; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
-        }
-        
-        .app-dev-opt { 
-            font-size: 0.95em; color: #b0b3b8; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
-        }
+        .rank-badge { font-size: 1.8em; font-weight: 900; text-align: center; opacity: 0.9; font-family: 'Segoe UI', sans-serif; }
+        .app-icon-opt { width: 80px; height: 80px; border-radius: 18px; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
+        .app-info-col { display: flex; flex-direction: column; gap: 6px; overflow: hidden; justify-content: center; }
+        .app-title-opt { font-size: 1.25em; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
+        .app-dev-opt { font-size: 0.95em; color: #b0b3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
         
         .meta-tags { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
-        .meta-pill {
-            font-size: 0.8em; padding: 3px 10px; border-radius: 6px;
-            background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1);
-            font-weight: 600;
-        }
+        .meta-pill { font-size: 0.8em; padding: 3px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1); font-weight: 600; }
         .meta-pill.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.2); }
         .meta-pill.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.2); }
 
-        /* --- 3. BUTTONS DESIGN (CARD FOOTER) --- */
+        /* --- 3. MAGIC BUTTONS (CARD FOOTER) --- */
         
-        /* Chỉnh sửa nút Link (Store) và Button (Xem) */
+        /* Reset style mặc định của nút */
         div[data-testid="stLinkButton"] a, div[data-testid="stButton"] button {
             width: 100%;
-            border-radius: 0 0 12px 12px !important; /* Bo góc dưới */
-            border-top: none !important; /* Bỏ viền trên */
-            border: 1px solid rgba(255,255,255,0.1);
-            background-color: #242730; /* Màu nền trùng với Card */
-            color: #ccc;
+            border: 1px solid rgba(255,255,255,0.08);
+            border-top: none !important; /* Bỏ viền trên để nối với card */
+            background-color: #1e2028; /* Màu nền trùng với Card Top */
+            color: #b0b3b8;
             font-weight: 600;
+            font-size: 0.9em;
             transition: all 0.2s;
-            height: 42px; /* Chiều cao cố định */
-            margin-top: -16px; /* Kỹ thuật quan trọng: Kéo nút lên dính vào card */
-            z-index: 1;
+            height: 45px;
+            margin-top: -15px !important; /* Kéo lên dính vào card trên */
+            border-radius: 0; /* Mặc định vuông góc */
         }
         
-        /* Hiệu ứng Hover riêng biệt */
+        /* --- KỸ THUẬT BO GÓC RIÊNG BIỆT --- */
+        
+        /* Cột bên trái (Nút Google Play): Bo góc dưới trái */
+        div[data-testid="column"]:nth-of-type(1) div[data-testid="stLinkButton"] a {
+            border-radius: 0 0 0 16px !important;
+            border-right: 1px solid rgba(255,255,255,0.05) !important; /* Vách ngăn giữa 2 nút */
+        }
+
+        /* Cột bên phải (Nút Xem): Bo góc dưới phải */
+        div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button {
+            border-radius: 0 0 16px 0 !important;
+            border-left: none !important;
+        }
+
+        /* Hiệu ứng Hover */
         div[data-testid="stLinkButton"] a:hover {
-            background-color: #1b5e20 !important; /* Xanh lá đậm cho Store */
-            color: #fff !important;
-            border-color: #4caf50 !important;
+            background-color: #2e7d32 !important; color: white !important;
         }
-        
         div[data-testid="stButton"] button:hover {
-            background-color: #0d47a1 !important; /* Xanh dương đậm cho Xem */
-            color: #fff !important;
-            border-color: #2979ff !important;
+            background-color: #1565c0 !important; color: white !important;
         }
 
         /* --- Detail Header --- */

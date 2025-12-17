@@ -20,7 +20,7 @@ def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
     border_style = f"border-left: 5px solid {theme_color};"
     price_text = "Free" if price == 0 else f"{price:,.0f} đ"
 
-    # 1. PHẦN TRÊN (INFO CARD - HTML)
+    # 1. PHẦN TRÊN (INFO CARD - HTML) - Có viền màu bên trái
     html_top = f"""
     <div class="app-card-top" style="{border_style}">
         <div class="rank-badge" style="{rank_style}">#{rank}</div>
@@ -37,19 +37,21 @@ def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
     """
     st.markdown(html_top, unsafe_allow_html=True)
 
-    # 2. PHẦN DƯỚI (ACTION BUTTONS - PYTHON)
-    # Dùng columns(2) để chia đều chiều rộng
-    # gap="small" để tạo khe hở nhỏ giữa 2 nút
-    c1, c2 = st.columns(2, gap="small")
+    # 2. PHẦN DƯỚI (BUTTONS) - KHÔNG viền màu bên trái
+    # Quan trọng: gap="0" để 2 nút dính liền nhau
+    c1, c2 = st.columns(2, gap="0")
     
     with c1:
-        # Nút Link (Store)
+        # Nút Link (Store) -> Tự động bo góc dưới-trái nhờ CSS
         st.link_button("🌍 Google Play", store_url, use_container_width=True)
         
     with c2:
-        # Nút Xem (Internal Logic)
+        # Nút Xem -> Tự động bo góc dưới-phải nhờ CSS
         unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
-        if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
+        if st.button("🔍 Chi tiết", key=unique_key, use_container_width=True):
             st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
             st.session_state.view_mode = 'detail'
             st.rerun()
+    
+    # Thêm khoảng cách nhỏ dưới mỗi item để tách biệt các item với nhau
+    st.markdown("<div style='margin-bottom: 15px;'></div>", unsafe_allow_html=True)
