@@ -163,8 +163,15 @@ async function scrapeSearch() {
 }
 
 async function scrapeSimilar() {
-    const s = await gplay.similar({ appId: target, lang: targetLang, country: targetCountry });
-    fs.writeFileSync('data/similar_apps.json', JSON.stringify(s));
+    try {
+        console.log(`Searching similar apps for: ${target}`);
+        const s = await gplay.similar({ appId: target, lang: targetLang, country: targetCountry });
+        fs.writeFileSync('data/similar_apps.json', JSON.stringify(s || []));
+    } catch (e) {
+        console.error(`⚠️ Similar Apps Error: ${e.message}`);
+        // Nếu lỗi, ghi file rỗng để Python không bị treo UI
+        fs.writeFileSync('data/similar_apps.json', JSON.stringify([]));
+    }
 }
 
 async function scrapeDeveloper() {

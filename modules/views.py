@@ -386,7 +386,7 @@ def render_detail_view(target_cat_default):
                     <div class="data-purpose">🎯 <b>Mục đích:</b> {purpose}</div>
                 </div>
                 """, unsafe_allow_html=True)
-                
+
         with col_share:
             st.markdown("#### 📤 Dữ liệu chia sẻ")
             st.caption("Dữ liệu chia sẻ với bên thứ 3.")
@@ -397,11 +397,46 @@ def render_detail_view(target_cat_default):
             st.caption("Dữ liệu ứng dụng thu thập.")
             render_safety_card(ds.get('collectedData', []), is_collected=True)
 
-    with tab4: # Competitors
-        if st.session_state.similar_apps:
-            cols = st.columns(3)
-            for i, s in enumerate(st.session_state.similar_apps):
-                with cols[i%3]: render_mini_card(s, curr_country, i, "sim")
+        with tab4:
+            current_id = d.get('appId')
+            current_dev = d.get('developer', '').lower().strip()
+            
+            # 1. Kiểm tra dữ liệu đầu vào
+            if not st.session_state.similar_apps:
+                st.info("⚠️ Không tìm thấy danh sách ứng dụng tương tự từ Google Play.")
+            else:
+                # 2. Logic lọc: Bỏ chính nó và bỏ App cùng nhà phát triển
+                real_competitors = []
+                for s in st.session_state.similar_apps:
+                    s_id = s.get('appId')
+                    s_dev = s.get('developer', '').lower().strip()
+                    
+                    # Giữ lại nếu ID khác nhau VÀ Developer khác nhau
+                    # (Dùng 'not in' để lọc các biến thể tên Dev, ví dụ: "Garena" vs "Garena International")
+                    if s_id != current_id and (current_dev not in s_dev):
+                        real_competitors.append(s)
+
+                # 3. Hiển thị kết quả
+                if real_competitors:
+                    st.caption(f"🎯 Hiển thị **{len(real_competitors)}** đối thủ cạnh tranh (Đã lọc bỏ App cùng nhà phát hành).")
+                    
+                    # Grid 3 cột
+                    cols = st.columns(3)
+                    country_code = st.session_state.selected_app.get('country_override', 'vn')
+                    
+                    for i, s in enumerate(real_competitors):
+                        with cols[i % 3]:
+                            render_mini_card(s, country_code, i, "sim")
+                else:
+                    # Trường hợp Google trả về data nhưng toàn là App cùng nhà -> Bị lọc hết
+                    st.warning(f"⚠️ Google Play có gợi ý ứng dụng tương tự, nhưng tất cả đều thuộc cùng nhà phát triển '{d.get('developer')}'.")
+                    
+                    # [Tùy chọn] Hiển thị luôn danh sách chưa lọc để người dùng tham khảo
+                    with st.expander("Xem danh sách chưa lọc"):
+                         cols_raw = st.columns(3)
+                         for i, s in enumerate(st.session_state.similar_apps[:6]):
+                             with cols_raw[i % 3]:
+                                 render_mini_card(s, country_code, i, "raw_sim")
     
     with tab5: # Dev Apps
         if st.session_state.dev_apps:
