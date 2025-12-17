@@ -6,18 +6,18 @@ def load_css():
     <style>
         .stApp { background-color: #0e1117; }
         
-        /* --- CARD TOP --- */
+        /* --- CARD TOP (INFO PART) --- */
         .app-card-top {
             background: linear-gradient(145deg, #1e2028, #242730);
-            border-radius: 16px 16px 0 0; 
+            border-radius: 16px; /* Bo tròn cả 4 góc */
             padding: 16px 20px;
-            margin-bottom: 0px !important; 
+            margin-bottom: 10px; /* Tạo khoảng cách với nút */
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-bottom: 1px solid rgba(255,255,255,0.05);
+            
             display: grid; grid-template-columns: 50px 80px 1fr; gap: 20px; align-items: center;
         }
 
-        /* Elements */
+        /* --- ELEMENTS (Badge, Icon, Text...) --- */
         .rank-badge { font-size: 1.8em; font-weight: 900; text-align: center; opacity: 0.9; font-family: 'Segoe UI', sans-serif; }
         .app-icon-opt { width: 80px; height: 80px; border-radius: 18px; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
         .app-info-col { display: flex; flex-direction: column; gap: 6px; overflow: hidden; justify-content: center; }
@@ -29,37 +29,46 @@ def load_css():
         .meta-pill.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.2); }
         .meta-pill.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.2); }
 
-        /* --- BUTTONS FIX --- */
+        /* --- NEW BUTTONS STYLE (OUTLINED PILLS) --- */
+        
+        /* 1. Cấu hình chung cho cả 2 nút */
         div[data-testid="stLinkButton"] a, div[data-testid="stButton"] button {
             width: 100%;
-            border: 1px solid rgba(255,255,255,0.08);
-            border-top: none !important;
-            background-color: #1e2028;
-            color: #b0b3b8;
-            font-weight: 600;
-            font-size: 0.9em;
-            transition: all 0.2s;
-            height: 45px;
-            margin-top: -16px !important; /* Kéo lên dính vào card */
-            border-radius: 0;
+            background-color: transparent !important; /* Nền trong suốt */
+            border-width: 1px !important;
+            border-style: solid !important;
+            font-weight: 700 !important;
+            border-radius: 8px !important; /* Bo góc giống Badge */
+            margin-top: -5px !important;   /* Kéo sát lên card trên */
+            height: 40px !important;
+            transition: all 0.3s ease !important;
+            text-transform: none !important;
+            display: flex; align-items: center; justify-content: center;
         }
-        
-        /* [UPDATE] Bo góc khi có gap="small" */
-        /* Nút Trái: Bo góc dưới trái */
+
+        /* 2. Nút TRÁI (Google Play) -> Style giống thẻ FREE (Màu Xanh Lá) */
         div[data-testid="column"]:nth-of-type(1) div[data-testid="stLinkButton"] a {
-            border-radius: 0 0 0 16px !important;
-            /* Đã xóa border-right thủ công vì gap="small" đã tạo khoảng cách */
+            border-color: #69f0ae !important;
+            color: #69f0ae !important;
+        }
+        /* Hover hiệu ứng phát sáng xanh */
+        div[data-testid="column"]:nth-of-type(1) div[data-testid="stLinkButton"] a:hover {
+            background-color: rgba(105, 240, 174, 0.1) !important;
+            box-shadow: 0 0 10px rgba(105, 240, 174, 0.4) !important;
+            transform: translateY(-2px);
         }
 
-        /* Nút Phải: Bo góc dưới phải */
+        /* 3. Nút PHẢI (Chi tiết) -> Style giống thẻ STAR (Màu Vàng) */
         div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button {
-            border-radius: 0 0 16px 0 !important;
-             /* Đã xóa border-left thủ công */
+            border-color: #ffbd45 !important;
+            color: #ffbd45 !important;
         }
-
-        /* Hover Effects */
-        div[data-testid="stLinkButton"] a:hover { background-color: #2e7d32 !important; color: white !important; }
-        div[data-testid="stButton"] button:hover { background-color: #1565c0 !important; color: white !important; }
+        /* Hover hiệu ứng phát sáng vàng */
+        div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button:hover {
+            background-color: rgba(255, 189, 69, 0.1) !important;
+            box-shadow: 0 0 10px rgba(255, 189, 69, 0.4) !important;
+            transform: translateY(-2px);
+        }
 
         /* --- Detail Header --- */
         .hero-header {
