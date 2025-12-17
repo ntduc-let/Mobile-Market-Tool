@@ -480,10 +480,20 @@ def render_detail_view(target_cat_default):
         # --- PHẦN 1: THÔNG SỐ KỸ THUẬT (GRID VIEW) ---
         st.markdown("#### 📱 Thông số kỹ thuật")
             
+        def format_timestamp(ts):
+            try:
+                # Nếu dữ liệu là số (int/float)
+                if isinstance(ts, (int, float)):
+                    # Timestamp của Google là miliseconds, cần chia 1000 để ra seconds
+                    return datetime.fromtimestamp(ts / 1000).strftime("%d/%m/%Y")
+                return str(ts) if ts else "N/A"
+            except:
+                return "N/A"
+
         specs = [
             {"label": "App ID", "val": d.get('appId'), "icon": "🆔", "color": "bg-blue"},
             {"label": "Phiên bản", "val": d.get('version') or 'Varies', "icon": "🚀", "color": "bg-green"},
-            {"label": "Cập nhật", "val": format_date_by_country(d.get('updated', 0), curr_country) if d.get('updated') else 'N/A', "icon": "📅", "color": "bg-orange"},
+            {"label": "Cập nhật", "val": format_timestamp(d.get('updated')), "icon": "📅", "color": "bg-orange"},
             {"label": "Phát hành", "val": d.get('released') or 'N/A', "icon": "🎂", "color": "bg-pink"},
             {"label": "Android OS", "val": d.get('androidVersion') or 'Varies', "icon": "🤖", "color": "bg-teal"},
             {"label": "Độ tuổi", "val": d.get('contentRating') or 'Unrated', "icon": "🔞", "color": "bg-red"},
