@@ -15,30 +15,64 @@ def load_css():
             margin-bottom: 12px;
             border: 1px solid rgba(255, 255, 255, 0.08);
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
-            display: flex; align-items: center; gap: 12px;
-            position: relative; overflow: hidden;
+            transition: all 0.3s ease;
+            
+            /* Dùng Grid để chia bố cục: Rank | Icon | Info | Actions */
+            display: grid;
+            grid-template-columns: 40px 64px 1fr auto; 
+            gap: 15px;
+            align-items: center;
         }
+        
         .app-card-optimized:hover {
-            transform: translateY(-4px) scale(1.02);
+            transform: translateY(-4px);
             box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-            border-color: rgba(255, 255, 255, 0.2);
+            border-color: rgba(100, 181, 246, 0.5); /* Viền sáng khi hover */
         }
 
-        /* --- Text & Badges --- */
-        .rank-badge { font-size: 1.5em; font-weight: 900; min-width: 35px; text-align: center; opacity: 0.9; }
-        .app-title-opt { font-size: 1em; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; margin-bottom: 4px; }
-        .app-dev-opt { font-size: 0.8em; color: #9aa0a6; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .app-icon-opt { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; flex-shrink: 0; }
+        /* Rank */
+        .rank-badge { font-size: 1.5em; font-weight: 900; text-align: center; }
         
+        /* Icon */
+        .app-icon-opt { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        
+        /* Info Column */
+        .app-info-col { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
+        .app-title-opt { font-size: 1.05em; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .app-dev-opt { font-size: 0.85em; color: #a0a0a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        
+        /* Meta Tags Row */
+        .meta-tags { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
+        .meta-tag { 
+            font-size: 0.75em; padding: 2px 8px; border-radius: 4px; 
+            background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 4px;
+        }
+        .meta-tag.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.3); }
+        .meta-tag.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.3); }
+        
+        /* Action Column (Right Side) */
+        .app-actions-col { 
+            display: flex; flex-direction: column; gap: 8px; 
+            min-width: 100px; /* Đảm bảo nút không bị bóp méo */
+        }
+        
+        /* Custom Buttons */
+        .btn-store {
+            text-decoration: none;
+            display: flex; justify-content: center; align-items: center; gap: 6px;
+            background: rgba(255,255,255,0.05); color: #ccc;
+            padding: 6px 12px; border-radius: 6px; font-size: 0.8em;
+            transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1);
+        }
+        .btn-store:hover { background: #fff; color: #000; border-color: #fff; }
+                
         /* --- Button Override --- */
         div[data-testid="stButton"] button {
-            border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);
-            background-color: transparent; color: #ccc; font-size: 0.8em;
-            padding: 2px 10px; transition: all 0.2s;
-        }
-        div[data-testid="stButton"] button:hover {
-            border-color: #64b5f6; color: #64b5f6; background-color: rgba(100, 181, 246, 0.1);
+            width: 100%;
+            border-radius: 6px;
+            font-size: 0.8em;
+            padding: 0.4rem 0.8rem;
         }
 
         /* --- Detail Header --- */
