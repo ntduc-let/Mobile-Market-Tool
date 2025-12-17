@@ -114,51 +114,55 @@ def render_detail_view(target_cat_default):
 
         # 3. Hiển thị Review (Card Chi Tiết)
         for r in filtered_revs:
-            # Xử lý dữ liệu an toàn
             user_name = r.get('userName', 'Hidden User')
             avatar_char = user_name[0].upper() if user_name else "?"
-            score = r.get('score', 0)
+            score = int(r.get('score', 0))
             stars = "⭐" * score
             date = r.get('date', '')
-            text = r.get('text', '')
+            text = r.get('text', '').replace("<", "&lt;").replace(">", "&gt;") # Fix lỗi nếu comment chứa ký tự lạ
             likes = r.get('thumbsUp', 0)
             version = r.get('version', '')
             reply_text = r.get('replyText')
             reply_date = r.get('replyDate')
 
             version_badge = f"<span class='rev-version'>v{version}</span>" if version else ""
+            
             reply_html = ""
             if reply_text:
+                # Fix lỗi ký tự lạ trong reply
+                safe_reply = reply_text.replace("<", "&lt;").replace(">", "&gt;")
                 reply_html = f"""
                 <div class="dev-reply-box">
                     <div class="dev-reply-header">
                         <span>👨‍💻 Developer Response</span>
                         <span>{reply_date}</span>
                     </div>
-                    <div class="dev-reply-text">{reply_text}</div>
+                    <div class="dev-reply-text">{safe_reply}</div>
                 </div>
                 """
 
-            st.markdown(f"""
-            <div class="rev-container">
-                <div class="rev-header">
-                    <div class="rev-user-info">
-                        <div class="rev-avatar">{avatar_char}</div>
-                        <div>
-                            <div class="rev-name">{user_name}</div>
-                            <div class="rev-date">{date}</div>
-                        </div>
-                    </div>
-                    {version_badge}
-                </div>
-                <div class="rev-star-row">{stars}</div>
-                <div class="rev-text">{text}</div>
-                <div class="rev-footer">
-                    <div class="rev-like">👍 {likes} Hữu ích</div>
-                </div>
-                {reply_html}
-            </div>
-            """, unsafe_allow_html=True)
+            # --- QUAN TRỌNG: HTML VIẾT SÁT LỀ TRÁI, KHÔNG THỤT DÒNG ---
+            review_html = f"""
+<div class="rev-container">
+<div class="rev-header">
+<div class="rev-user-info">
+<div class="rev-avatar">{avatar_char}</div>
+<div>
+<div class="rev-name">{user_name}</div>
+<div class="rev-date">{date}</div>
+</div>
+</div>
+{version_badge}
+</div>
+<div class="rev-star-row">{stars}</div>
+<div class="rev-text">{text}</div>
+<div class="rev-footer">
+<div class="rev-like">👍 {likes} Hữu ích</div>
+</div>
+{reply_html}
+</div>
+"""
+            st.markdown(review_html, unsafe_allow_html=True)
 
         # 4. Nút Tải Thêm (Fix Lỗi)
         if st.session_state.next_token:
