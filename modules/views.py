@@ -69,13 +69,60 @@ def render_detail_view(target_cat_default):
     d = st.session_state.detail_data
     if not d: return
 
-    # Header
-    bg_url = d.get('headerImage') or d.get('icon')
-    badges = ""
-    if d.get('adSupported'): badges += "<span class='badge badge-ad'>Ads</span>"
-    if d.get('offersIAP'): badges += "<span class='badge badge-iap'>IAP</span>"
-    st.markdown(f"""<div class="hero-header"><div class="hero-bg" style="background-image: url('{bg_url}');"></div><img src="{d.get('icon')}" class="hero-icon-big"><div style="z-index: 2; color: white;"><h1 class="hero-title-text">{d.get('title')}</h1><div style="color: #64b5f6; margin-bottom: 10px;">by {d.get('developer')}</div><div>{badges}</div></div></div>""", unsafe_allow_html=True)
+    # --- NEW UI: CINEMATIC HEADER ---
+    # 1. Chuẩn bị dữ liệu hiển thị
+    bg_url = d.get('headerImage') or d.get('icon') # Lấy ảnh bìa, nếu ko có thì dùng icon làm nền
+    icon_url = d.get('icon')
+    title = d.get('title')
+    dev_name = d.get('developer')
+    dev_id = d.get('developerId')
+    
+    # 2. Xử lý Badges (Thẻ)
+    badges_html = ""
+    
+    # Thẻ Giá tiền
+    if d.get('free'):
+        badges_html += '<span class="h-tag tag-free">Free</span>'
+    else:
+        price = d.get('price', 0)
+        price_txt = f"{price:,.0f} đ" if price else "Paid"
+        badges_html += f'<span class="h-tag tag-paid">{price_txt}</span>'
 
+    # Thẻ Quảng cáo & IAP
+    if d.get('adSupported'): 
+        badges_html += '<span class="h-tag tag-ads">Contains Ads</span>'
+    if d.get('offersIAP'): 
+        badges_html += '<span class="h-tag tag-iap">In-App Purchases</span>'
+
+    # 3. Tạo HTML Header
+    header_html = f"""
+    <div class="back-btn-container"></div>
+    <div class="hero-container">
+        <div class="hero-bg" style="background-image: url('{bg_url}');"></div>
+        <div class="hero-overlay"></div>
+        
+        <div class="hero-content">
+            <img src="{icon_url}" class="hero-icon-big">
+            <div class="hero-text-col">
+                <div class="hero-title">{title}</div>
+                <div class="hero-dev">
+                    👨‍💻 {dev_name}
+                </div>
+                <div class="hero-badges">
+                    {badges_html}
+                </div>
+            </div>
+        </div>
+    </div>
+    """
+    
+    # Render nút Back (Streamlit Native) nhưng nằm trên cùng
+    col_back, col_space = st.columns([1, 10])
+    with col_back:
+        st.button("⬅️ Back", on_click=lambda: st.session_state.update(view_mode='list'), use_container_width=True)
+    
+    # Render Header HTML
+    st.markdown(header_html, unsafe_allow_html=True)
     # Tabs
     tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs(["📊 Reviews", "📸 Media", "🛡️ Data Safety", "⚔️ Đối thủ", "🏢 Cùng Dev", "ℹ️ Info"])
     

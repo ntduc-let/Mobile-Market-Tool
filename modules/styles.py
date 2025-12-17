@@ -424,5 +424,108 @@ def load_css():
         .bg-cyan   { background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(0, 188, 212, 0.05)); color: #4dd0e1; }
         .bg-pink   { background: linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(233, 30, 99, 0.05)); color: #f06292; }
         .bg-teal   { background: linear-gradient(135deg, rgba(0, 150, 136, 0.2), rgba(0, 150, 136, 0.05)); color: #4db6ac; }
+                
+        /* --- NEW: CINEMATIC HERO HEADER --- */
+        .hero-container {
+            position: relative;
+            background-color: #161b22;
+            border-radius: 24px;
+            overflow: hidden;
+            margin-bottom: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+
+        /* Lớp nền mờ (Background Blur) */
+        .hero-bg {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background-position: center;
+            background-size: cover;
+            filter: blur(20px) brightness(0.4); /* Làm mờ và tối đi để nổi text */
+            z-index: 1;
+            transform: scale(1.1); /* Zoom nhẹ để tránh viền mờ */
+        }
+
+        /* Lớp phủ Gradient để dễ đọc chữ */
+        .hero-overlay {
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to right, rgba(14, 17, 23, 0.9) 0%, rgba(14, 17, 23, 0.7) 40%, rgba(14, 17, 23, 0.4) 100%);
+            z-index: 2;
+        }
+
+        /* Nội dung chính (Icon + Text) */
+        .hero-content {
+            position: relative;
+            z-index: 3;
+            padding: 30px;
+            display: flex;
+            align-items: center;
+            gap: 25px;
+        }
+
+        /* Ảnh Icon App */
+        .hero-icon-big {
+            width: 120px;
+            height: 120px;
+            border-radius: 24px;
+            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
+            border: 2px solid rgba(255,255,255,0.1);
+            object-fit: cover;
+            background-color: #000;
+        }
+
+        /* Phần Text */
+        .hero-text-col {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+        .hero-title {
+            font-size: 2.2rem;
+            font-weight: 800;
+            color: #ffffff;
+            line-height: 1.2;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
+            font-family: 'Segoe UI', sans-serif;
+        }
+
+        .hero-dev {
+            font-size: 1rem;
+            color: #64b5f6; /* Màu xanh dương nhạt */
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        .hero-dev a { color: #64b5f6; text-decoration: none; }
+        .hero-dev a:hover { text-decoration: underline; color: #9be7ff; }
+
+        /* Badges (Ads / IAP / Free) */
+        .hero-badges {
+            display: flex;
+            gap: 8px;
+            margin-top: 5px;
+        }
+
+        .h-tag {
+            font-size: 0.75rem;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            display: inline-block;
+        }
+
+        .tag-ads { background: rgba(255, 235, 59, 0.15); color: #fff176; border: 1px solid rgba(255, 235, 59, 0.3); }
+        .tag-iap { background: rgba(105, 240, 174, 0.15); color: #b9f6ca; border: 1px solid rgba(105, 240, 174, 0.3); }
+        .tag-free{ background: rgba(33, 150, 243, 0.15); color: #90caf9; border: 1px solid rgba(33, 150, 243, 0.3); }
+        .tag-paid{ background: rgba(255, 82, 82, 0.15);  color: #ff8a80; border: 1px solid rgba(255, 82, 82, 0.3); }
+
+        /* Nút Back tùy chỉnh (Nếu muốn dùng) */
+        .back-btn-container { margin-bottom: 10px; }
         </style>
     """, unsafe_allow_html=True)
