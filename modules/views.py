@@ -469,22 +469,89 @@ def render_detail_view(target_cat_default):
                 # Trường hợp danh sách trả về chỉ có duy nhất 1 app là chính nó
                 st.warning(f"⚠️ Nhà phát triển **{d.get('developer')}** chỉ có duy nhất ứng dụng này trên cửa hàng.")
 
-    with tab6: # Info
-        c_tech, c_cat = st.columns(2)
-        with c_tech:
-            st.markdown("#### 📱 Kỹ thuật")
-            st.write(f"**ID:** `{d.get('appId')}`")
-            st.write(f"**Version:** {d.get('version')}")
-            st.write(f"**Size:** {d.get('size')}")
-        with c_cat:
-            st.markdown("#### 🏷️ Phân loại")
-            st.write(f"**Genre:** {d.get('genre')}")
-            st.write(f"**Released:** {d.get('released')}")
-            st.write(f"**Updated:** {d.get('updated')}")
-        st.divider()
-        if d.get('recentChanges'):
-            st.markdown("#### 🆕 Có gì mới")
-            st.info(d.get('recentChanges'))
-        st.divider()
-        with st.expander("📝 Mô tả chi tiết"):
-            st.markdown(d.get('descriptionHTML', ''), unsafe_allow_html=True)
+    # --- TAB 6: INFO (FULL UPDATE) ---
+    with tab6:
+        # Chuẩn bị dữ liệu
+        dev_email = d.get('developerEmail') or "Không có Email"
+        dev_web = d.get('developerWebsite')
+        dev_addr = d.get('developerAddress') or "Không có địa chỉ"
+        dev_id = d.get('developerId') or d.get('developer')
+        
+        # --- PHẦN 1: THÔNG SỐ KỸ THUẬT (GRID VIEW) ---
+        st.markdown("#### 📱 Thông số kỹ thuật")
+        
+        # Tạo HTML cho Grid
+        grid_html = f"""
+        <div class="info-grid-container">
+            <div class="info-box-item">
+                <span class="ib-label">📦 App ID (Package)</span>
+                <span class="ib-value">{d.get('appId')}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🚀 Version</span>
+                <span class="ib-value">{d.get('version') or 'Varies with device'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">📅 Cập nhật lần cuối</span>
+                <span class="ib-value">{format_date_by_country(d.get('updated', 0), curr_country) if d.get('updated') else 'N/A'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🎂 Ngày phát hành</span>
+                <span class="ib-value">{d.get('released') or 'N/A'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🤖 Android Yêu cầu</span>
+                <span class="ib-value">{d.get('androidVersion') or 'Varies'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🔞 Content Rating</span>
+                <span class="ib-value">{d.get('contentRating') or 'Unrated'}</span>
+            </div>
+             <div class="info-box-item">
+                <span class="ib-label">💾 Dung lượng</span>
+                <span class="ib-value">{d.get('size') or 'Varies with device'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🏷️ Thể loại</span>
+                <span class="ib-value">{d.get('genre')}</span>
+            </div>
+        </div>
+        """
+        st.markdown(grid_html, unsafe_allow_html=True)
+        
+        # --- PHẦN 2: THÔNG TIN DEVELOPER ---
+        st.markdown("#### 🏢 Nhà phát triển (Developer)")
+        
+        # Xây dựng HTML Contact
+        web_link = f'<a href="{dev_web}" target="_blank">{dev_web}</a>' if dev_web else "Không có Website"
+        email_link = f'<a href="mailto:{dev_email}">{dev_email}</a>'
+        
+        dev_html = f"""
+        <div class="dev-contact-card">
+            <div class="dev-row"><span class="dev-icon">🆔</span> <b>ID:</b> &nbsp; {dev_id}</div>
+            <div class="dev-row"><span class="dev-icon">📧</span> <b>Email:</b> &nbsp; {email_link}</div>
+            <div class="dev-row"><span class="dev-icon">🌐</span> <b>Web:</b> &nbsp; {web_link}</div>
+            <div class="dev-row"><span class="dev-icon">📍</span> <b>Address:</b> &nbsp; {dev_addr}</div>
+        </div>
+        """
+        st.markdown(dev_html, unsafe_allow_html=True)
+        
+        # --- PHẦN 3: MÔ TẢ & LIÊN KẾT KHÁC ---
+        c_desc, c_link = st.columns([2, 1])
+        
+        with c_desc:
+            st.markdown("#### 📝 Mô tả ứng dụng")
+            # Dùng expander để không chiếm hết màn hình nếu mô tả quá dài
+            with st.expander("Xem toàn bộ mô tả (Description)", expanded=True):
+                desc_html = d.get('descriptionHTML') or d.get('description') or "Không có mô tả."
+                st.markdown(f'<div class="desc-container">{desc_html}</div>', unsafe_allow_html=True)
+                
+        with c_link:
+            st.markdown("#### 🔗 Liên kết")
+            if d.get('privacyPolicy'):
+                st.link_button("🛡️ Chính sách riêng tư", d.get('privacyPolicy'), use_container_width=True)
+            
+            st.link_button("🌍 Xem trên Google Play Store", d.get('url'), use_container_width=True)
+            
+            if d.get('recentChanges'):
+                st.info(f"**🆕 Có gì mới:**\n\n{d.get('recentChanges')}")

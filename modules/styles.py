@@ -175,7 +175,7 @@ def load_css():
         .dev-reply-text { font-size: 0.9em; color: #cbd5e0; font-style: italic; }
 
         /* --- DATA SAFETY STYLES (NEW) --- */
-        
+
         /* 1. Khung chứa Security Practices (Màu xanh bảo mật) */
         .security-box {
             background-color: rgba(27, 94, 32, 0.15); /* Nền xanh lá nhạt */
@@ -193,7 +193,7 @@ def load_css():
             font-size: 0.95em;
         }
         .sec-icon { color: #69f0ae; font-size: 1.2em; margin-top: 2px; }
-    
+
         /* 2. Thẻ dữ liệu chi tiết (Data Card) */
         .data-item-card {
             background-color: #23252e;
@@ -204,20 +204,90 @@ def load_css():
             transition: all 0.2s;
         }
         .data-item-card:hover { border-color: #64b5f6; background-color: #2a2d36; }
-        
+
         .data-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
         .data-name { font-weight: 700; color: #fff; font-size: 0.95em; }
         .data-type { color: #aaa; font-size: 0.85em; font-style: italic; }
-        
+
         .data-purpose { 
             font-size: 0.85em; color: #ccc; 
             background: rgba(255,255,255,0.05); 
             padding: 6px; border-radius: 6px; margin-top: 6px; 
             line-height: 1.4;
         }
-    
+
         /* 3. Badges trạng thái */
         .badge-req { background: rgba(255, 75, 75, 0.2); color: #ff8a80; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(255, 75, 75, 0.3); }
         .badge-opt { background: rgba(105, 240, 174, 0.2); color: #b9f6ca; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(105, 240, 174, 0.3); }
+        
+        /* --- MỚI: CSS CHO TAB INFO --- */
+        /* 1. Grid chứa thông tin kỹ thuật */
+        .info-grid-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 25px;
+        }
+        
+        .info-box-item {
+            background-color: #1e2028;
+            border: 1px solid rgba(255,255,255,0.05);
+            border-radius: 12px;
+            padding: 15px;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+            transition: transform 0.2s;
+        }
+        .info-box-item:hover {
+            border-color: #64b5f6;
+            transform: translateY(-2px);
+            background-color: #232630;
+        }
+        
+        .ib-label {
+            font-size: 0.8rem;
+            text-transform: uppercase;
+            color: #8b949e;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+        
+        .ib-value {
+            font-size: 1rem;
+            color: #e6edf3;
+            font-weight: 700;
+            word-break: break-word;
+        }
+        
+        /* 2. Developer Contact Card */
+        .dev-contact-card {
+            background: linear-gradient(145deg, #161b22, #0d1117);
+            border-left: 4px solid #f78c6c; /* Màu cam */
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 25px;
+        }
+        .dev-row {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+            color: #c9d1d9; font-size: 0.95rem;
+        }
+        .dev-row a { color: #58a6ff; text-decoration: none; }
+        .dev-row a:hover { text-decoration: underline; }
+        .dev-icon { width: 20px; text-align: center; color: #f78c6c; }
+
+        /* 3. Description Styling */
+        .desc-container {
+            background-color: #161b22;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            color: #c9d1d9;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        /* Style cho HTML description từ Google trả về */
+        .desc-container h2, .desc-container h3 { color: #fff; margin-top: 15px; margin-bottom: 10px; }
+        .desc-container b { color: #e6edf3; }        
         </style>
     """, unsafe_allow_html=True)
