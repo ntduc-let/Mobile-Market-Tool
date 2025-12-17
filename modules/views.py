@@ -284,14 +284,44 @@ def render_detail_view(target_cat_default):
                         st.rerun()
 
     with tab2:
+        # 1. Video Section
+        st.subheader("🎥 Video Trailer")
+        
+        video_url = d.get('video')
+        if video_url:
+            # Nếu có video -> Hiển thị
+            st.video(video_url)
+        else:
+            # Nếu không có -> Báo rõ ràng cho người dùng biết
+            st.info("🔕 Ứng dụng này không có Video giới thiệu.")
+        
+        st.divider()
+        
+        # 2. Screenshots Section
+        st.subheader("🖼️ Screenshots")
+        
         if d.get('screenshots'):
-            html = '<div class="screenshot-container">'
-            base_id = d.get('appId').replace('.', '_')
+            st.caption("💡 Click ảnh để phóng to (Full màn hình).")
+            # HTML Content cho Screenshot (Giữ nguyên logic Zoom cũ)
+            html_content = '<div class="screenshot-scroll">'
+            base_id = d.get('appId', 'app').replace('.', '_')
+            
             for i, url in enumerate(d.get('screenshots')):
-                uid = f"{base_id}_{i}"
-                html += f"""<div style="display:inline-block;"><input type="checkbox" id="{uid}" class="lightbox-toggle"><label for="{uid}" class="thumb-label"><img src="{url}" class="thumb-img"></label><label for="{uid}" class="lightbox-overlay"><img src="{url}" class="full-img"></label></div>"""
-            html += '</div>'
-            st.markdown(html, unsafe_allow_html=True)
+                unique_id = f"img_{base_id}_{i}"
+                html_content += f"""<div style="display:inline-block;">
+                                    <input type="checkbox" id="{unique_id}" class="lightbox-toggle">
+                                    <label for="{unique_id}" class="thumb-label">
+                                    <img src="{url}" class="thumb-img" loading="lazy">
+                                    </label>
+                                    <label for="{unique_id}" class="lightbox-overlay">
+                                    <img src="{url}" class="full-img">
+                                    </label>
+                                    </div>
+                                """
+            html_content += '</div>'
+            st.markdown(html_content, unsafe_allow_html=True)
+        else: 
+            st.warning("📭 Không có ảnh chụp màn hình.")
     
     with tab3: # Data Safety
         ds = d.get('dataSafety', {})
