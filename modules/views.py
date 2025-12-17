@@ -3,6 +3,8 @@ import streamlit as st
 import pandas as pd
 import time
 import plotly.express as px
+from datetime import datetime
+from zoneinfo import ZoneInfo
 from .components import render_mini_card
 from .backend import run_node_safe
 from .config import COUNTRIES_LIST
@@ -112,42 +114,136 @@ def render_detail_view(target_cat_default):
 
         st.caption(f"Hiển thị **{len(filtered_revs)}** / {len(all_revs)} đánh giá.")
 
-        # 3. Hiển thị Review (Card Chi Tiết)
+        # BẢNG MAPPING MÚI GIỜ CÁC QUỐC GIA PHỔ BIẾN
+        # Bạn có thể bổ sung thêm nếu thiếu
+        TZ_MAP = {
+            # --- CHÂU Á ---
+            'vn': 'Asia/Ho_Chi_Minh',   # Việt Nam
+            'jp': 'Asia/Tokyo',         # Nhật Bản
+            'kr': 'Asia/Seoul',         # Hàn Quốc
+            'cn': 'Asia/Shanghai',      # Trung Quốc
+            'tw': 'Asia/Taipei',        # Đài Loan
+            'hk': 'Asia/Hong_Kong',     # Hồng Kông
+            'sg': 'Asia/Singapore',     # Singapore
+            'th': 'Asia/Bangkok',       # Thái Lan
+            'id': 'Asia/Jakarta',       # Indonesia (Tây)
+            'ph': 'Asia/Manila',        # Philippines
+            'my': 'Asia/Kuala_Lumpur',  # Malaysia
+            'in': 'Asia/Kolkata',       # Ấn Độ
+            'pk': 'Asia/Karachi',       # Pakistan
+            'bd': 'Asia/Dhaka',         # Bangladesh
+            'sa': 'Asia/Riyadh',        # Ả Rập Xê Út
+            'ae': 'Asia/Dubai',         # UAE
+            'il': 'Asia/Jerusalem',     # Israel
+            'tr': 'Europe/Istanbul',    # Thổ Nhĩ Kỳ
+
+            # --- CHÂU MỸ ---
+            'us': 'America/New_York',   # Hoa Kỳ (Bờ Đông)
+            'ca': 'America/Toronto',    # Canada (Bờ Đông)
+            'br': 'America/Sao_Paulo',  # Brazil
+            'mx': 'America/Mexico_City',# Mexico
+            'ar': 'America/Argentina/Buenos_Aires', # Argentina
+            'cl': 'America/Santiago',   # Chile
+            'co': 'America/Bogota',     # Colombia
+            'pe': 'America/Lima',       # Peru
+
+            # --- CHÂU ÂU ---
+            'gb': 'Europe/London',      # Anh
+            'de': 'Europe/Berlin',      # Đức
+            'fr': 'Europe/Paris',       # Pháp
+            'it': 'Europe/Rome',        # Ý
+            'es': 'Europe/Madrid',      # Tây Ban Nha
+            'ru': 'Europe/Moscow',      # Nga
+            'nl': 'Europe/Amsterdam',   # Hà Lan
+            'se': 'Europe/Stockholm',   # Thụy Điển
+            'ch': 'Europe/Zurich',      # Thụy Sĩ
+            'no': 'Europe/Oslo',        # Na Uy
+            'dk': 'Europe/Copenhagen',  # Đan Mạch
+            'fi': 'Europe/Helsinki',    # Phần Lan
+            'pl': 'Europe/Warsaw',      # Ba Lan
+            'ua': 'Europe/Kyiv',        # Ukraine
+            'pt': 'Europe/Lisbon',      # Bồ Đào Nha
+            'ro': 'Europe/Bucharest',   # Romania
+            'cz': 'Europe/Prague',      # Séc
+            'hu': 'Europe/Budapest',    # Hungary
+            'be': 'Europe/Brussels',    # Bỉ
+            'at': 'Europe/Vienna',      # Áo
+            'ie': 'Europe/Dublin',      # Ireland
+
+            # --- CHÂU ÚC & CHÂU PHI ---
+            'au': 'Australia/Sydney',   # Úc
+            'nz': 'Pacific/Auckland',   # New Zealand
+            'za': 'Africa/Johannesburg',# Nam Phi
+            'eg': 'Africa/Cairo',       # Ai Cập
+            'ng': 'Africa/Lagos'        # Nigeria
+        }
+
+        # 3. Hiển thị Review (Card Chi Tiết) - ĐÃ CÓ TIMEZONE
         for r in filtered_revs:
+            # --- HÀM XỬ LÝ NGÀY THÁNG THEO QUỐC GIA ---
+            def format_date_by_country(iso_str, country_code):
+                try:
+                    if "T" in iso_str and "Z" in iso_str:
+                        # 1. Parse giờ UTC gốc từ Google (Z = UTC)
+                        dt_utc = datetime.strptime(iso_str, "%Y-%m-%dT%H:%M:%S.%fZ").replace(tzinfo=ZoneInfo("UTC"))
+                        
+                        # 2. Lấy timezone đích dựa vào mã quốc gia (mặc định là UTC nếu không tìm thấy)
+                        target_tz_name = TZ_MAP.get(country_code, 'UTC')
+                        target_tz = ZoneInfo(target_tz_name)
+                        
+                        # 3. Chuyển đổi múi giờ
+                        dt_local = dt_utc.astimezone(target_tz)
+                        
+                        # 4. Format: HH:MM ngày dd/mm/yyyy (Kèm tên múi giờ cho rõ)
+                        # Ví dụ: 14:30 16/12/2025 (EST)
+                        tz_abbr = dt_local.tzname() 
+                        return f"{dt_local.strftime('%H:%M %d/%m/%Y')} ({tz_abbr})"
+                    return iso_str
+                except Exception:
+                    return iso_str
+            # ----------------------------------------------
+
             user_name = r.get('userName', 'Hidden User')
             avatar_char = user_name[0].upper() if user_name else "?"
             score = int(r.get('score', 0))
             stars = "⭐" * score
-            date = r.get('date', '')
             
-            # Xử lý nội dung comment: Thay thế xuống dòng bằng thẻ <br> để không vỡ layout
+            # Xử lý text
             raw_text = r.get('text', '') or ''
             text = raw_text.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
             
             likes = r.get('thumbsUp', 0)
             version = r.get('version', '')
-            reply_text = r.get('replyText')
-            reply_date = r.get('replyDate')
+            
+            # Xử lý ngày tháng: Ưu tiên dùng replyDate (thường chuẩn ISO) để tính giờ, 
+            # nếu không có thì dùng date (text)
+            # Lưu ý: 'date' của review thường Google trả về text (Sep 12, 2024), khó convert chính xác giờ.
+            # Nhưng 'replyDate' (khi Dev trả lời) luôn là ISO chuẩn. 
+            
+            # Tuy nhiên, ở đây ta cứ hiển thị 'date' gốc của review (vì nó là text).
+            # Còn 'replyDate' của Dev thì ta convert theo múi giờ quốc gia.
+            date_display = r.get('date', '')
 
-            # Badge version: Nếu có thì hiện, không thì rỗng
+            reply_text = r.get('replyText')
+            raw_reply_date = r.get('replyDate', '')
+            
+            # Convert giờ trả lời của Dev theo quốc gia
+            reply_date_fmt = format_date_by_country(raw_reply_date, curr_country) if raw_reply_date else ""
+
             version_badge = f"<span class='rev-version'>v{version}</span>" if version else ""
             
-            # Xử lý Reply HTML: QUAN TRỌNG - VIẾT SÁT LỀ TRÁI TUYỆT ĐỐI
             reply_html = ""
             if reply_text:
                 safe_reply = reply_text.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
-                # Lưu ý: Các dòng dưới đây KHÔNG ĐƯỢC THỤT VÀO, phải sát lề trái của file
                 reply_html = f"""
 <div class="dev-reply-box">
 <div class="dev-reply-header">
 <span>👨‍💻 Developer Response</span>
-<span>{reply_date}</span>
+<span>{reply_date_fmt}</span>
 </div>
 <div class="dev-reply-text">{safe_reply}</div>
 </div>"""
 
-            # Tạo HTML tổng: QUAN TRỌNG - VIẾT SÁT LỀ TRÁI TUYỆT ĐỐI
-            # Không thụt dòng bất kỳ thẻ div nào
             review_html = f"""
 <div class="rev-container">
 <div class="rev-header">
@@ -155,7 +251,7 @@ def render_detail_view(target_cat_default):
 <div class="rev-avatar">{avatar_char}</div>
 <div>
 <div class="rev-name">{user_name}</div>
-<div class="rev-date">{date}</div>
+<div class="rev-date">{date_display}</div>
 </div>
 </div>
 {version_badge}
