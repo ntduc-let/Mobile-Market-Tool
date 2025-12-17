@@ -119,13 +119,23 @@ async function scrapeAppDetail() {
         d.permissions = perms;
     } catch (e) {}
 
-    // [UPDATE] 4. Lấy Data Safety (Quan trọng cho Full Features)
+    // [UPDATE] 4. Lấy Data Safety
     try {
+        // Bước 1: Thử lấy theo ngôn ngữ & quốc gia đã chọn
         const safety = await gplay.datasafety({ appId: target, lang: targetLang, country: targetCountry });
         d.dataSafety = safety;
     } catch (e) { 
-        d.dataSafety = { sharedData: [], collectedData: [] }; // Fallback
-    }
+        console.warn(`⚠️ Data Safety (${targetLang}) failed: ${e.message}. Trying English...`);
+        try {
+            // Bước 2 (Fallback): Thử lấy bằng tiếng Anh (thường cấu trúc HTML chuẩn nhất)
+            const safetyEn = await gplay.datasafety({ appId: target, lang: 'en', country: targetCountry });
+            d.dataSafety = safetyEn;
+        } catch (e2) {
+            console.error(`❌ Data Safety completely failed: ${e2.message}`);
+            // Nếu cả 2 đều lỗi thì trả về rỗng để Python xử lý
+            d.dataSafety = {}; 
+        }
+    }   
 
     fs.writeFileSync('data/app_detail.json', JSON.stringify(d));
 }
