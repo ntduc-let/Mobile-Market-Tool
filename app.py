@@ -507,64 +507,40 @@ if st.sidebar.button("🚀 Quét Chart", type="primary"):
 # --- 9. MAIN VIEW ---
 
 # A. LIST VIEW
-# A. LIST VIEW (CẬP NHẬT: THÊM DẠNG BẢNG & APP MỚI)
 if st.session_state.view_mode == 'list':
     st.title(f"📊 Market: {sel_cat_lbl} ({sel_country_lbl})")
     
     # Load data
-    df = load_data_today(CATEGORIES_LIST[sel_cat_lbl], COUNTRIES_LIST[sel_country_lbl]) # Đảm bảo biến khớp với sidebar
+    df = load_data_today(CATEGORIES_LIST[sel_cat_lbl], COUNTRIES_LIST[sel_country_lbl])
     
     if not df.empty:
-        # Chọn chế độ xem
-        view_type = st.radio("Chế độ xem:", ["📱 Dạng Thẻ (Grid)", "📄 Dạng Bảng (Table)"], horizontal=True)
+        # --- BỎ st.radio VÀ LOGIC BẢNG, CHỈ GIỮ LẠI GRID 3 CỘT ---
         st.divider()
 
-        if view_type == "📱 Dạng Thẻ (Grid)":
-            # --- CODE MỚI (SENSOR TOWER STYLE) ---
-            # Chia màn hình thành 3 cột lớn
-            col_free, col_paid, col_gross = st.columns(3)
+        # Chia màn hình thành 3 cột lớn (Sensor Tower Style)
+        col_free, col_paid, col_gross = st.columns(3)
 
-            # Hàm render danh sách dọc (không chia cột con nữa)
-            def render_vertical_list(container, header_title, collection_name, key_suffix, header_color):
-                with container:
-                    # Tiêu đề cột
-                    st.markdown(f"<h3 style='text-align: center; color: {header_color}; margin-bottom: 20px;'>{header_title}</h3>", unsafe_allow_html=True)
-                    
-                    # Lọc dữ liệu
-                    subset = df[df['collection_type'] == collection_name].sort_values('rank')
-                    
-                    if not subset.empty:
-                        # Render từng thẻ xếp chồng lên nhau (Vertical Stack)
-                        for i, r in enumerate(subset.to_dict('records')):
-                            render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
-                    else:
-                        st.info("Chưa có dữ liệu.")
+        # Hàm render danh sách dọc
+        def render_vertical_list(container, header_title, collection_name, key_suffix, header_color):
+            with container:
+                # Tiêu đề cột
+                st.markdown(f"<h3 style='text-align: center; color: {header_color}; margin-bottom: 20px;'>{header_title}</h3>", unsafe_allow_html=True)
+                
+                # Lọc dữ liệu
+                subset = df[df['collection_type'] == collection_name].sort_values('rank')
+                
+                if not subset.empty:
+                    # Render từng thẻ xếp chồng lên nhau
+                    for i, r in enumerate(subset.to_dict('records')):
+                        render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
+                else:
+                    st.info("Chưa có dữ liệu.")
 
-            # Gọi hàm render cho 3 cột
-            render_vertical_list(col_free, "🔥 Top Free", "top_free", "tf", "#4caf50")       # Màu xanh lá
-            render_vertical_list(col_paid, "💸 Top Paid", "top_paid", "tp", "#64b5f6")       # Màu xanh dương
-            render_vertical_list(col_gross, "💰 Grossing", "top_grossing", "tg", "#ffbd45")  # Màu vàng
+        # Gọi hàm render cho 3 cột
+        render_vertical_list(col_free, "🔥 Top Free", "top_free", "tf", "#4caf50")       
+        render_vertical_list(col_paid, "💸 Top Paid", "top_paid", "tp", "#64b5f6")       
+        render_vertical_list(col_gross, "💰 Grossing", "top_grossing", "tg", "#ffbd45")
 
-        else: # Dạng Bảng (Table View) - Rất tốt để so sánh chỉ số
-            st.markdown("### 📋 Bảng tổng hợp chi tiết")
-            
-            # Chuẩn bị dữ liệu hiển thị đẹp hơn
-            df_display = df.copy()
-            df_display = df_display[['rank', 'title', 'developer', 'score', 'price', 'collection_type']]
-            df_display.columns = ['Rank', 'Tên App', 'Nhà phát triển', 'Điểm', 'Giá', 'Bộ sưu tập']
-            
-            # Sử dụng Dataframe tương tác của Streamlit
-            st.dataframe(
-                df_display,
-                use_container_width=True,
-                hide_index=True,
-                column_config={
-                    "Rank": st.column_config.NumberColumn("Hạng", format="#%d"),
-                    "Điểm": st.column_config.ProgressColumn("Rating", min_value=0, max_value=5, format="%.1f"),
-                    "Giá": st.column_config.NumberColumn("Giá (VND)", format="%.0f ₫"),
-                    "Bộ sưu tập": st.column_config.TextColumn("Nhóm", width="medium"),
-                }
-            )
     else: 
         st.info("👋 Chưa có dữ liệu ngày hôm nay. Hãy chọn số lượng và bấm '🚀 Quét Chart' ở thanh bên.")
 
@@ -576,46 +552,17 @@ elif st.session_state.view_mode == 'search_results':
     st.title(f"🔎 Kết quả: {len(results)} ứng dụng")
     
     if results:
-        # Chọn chế độ xem
-        view_type = st.radio("Chế độ hiển thị:", ["📱 Dạng Thẻ (Grid)", "📄 Dạng Bảng (Table)"], horizontal=True, key="search_view_radio")
         st.divider()
 
-        # Lấy quốc gia từ lần tìm kiếm trước (hoặc mặc định)
-        # Lưu ý: search_country_label là biến sidebar, có thể đã bị đổi. 
-        # Tốt nhất nên lưu country vào session_state khi bấm nút tìm, nhưng ở đây ta tạm dùng biến toàn cục COUNTRIES_LIST
+        # Lấy quốc gia hiện tại
         current_search_country = COUNTRIES_LIST.get(search_country_label, 'vn') 
 
-        if view_type == "📱 Dạng Thẻ (Grid)":
-            cols = st.columns(3)
-            for i, app in enumerate(results):
-                with cols[i % 3]: 
-                    render_mini_card(app, current_search_country, i, "sr")
+        # --- BỎ TABLE VIEW, CHỈ HIỂN THỊ GRID ---
+        cols = st.columns(3)
+        for i, app in enumerate(results):
+            with cols[i % 3]: 
+                render_mini_card(app, current_search_country, i, "sr")
         
-        else: # Dạng Bảng
-            # Chuyển đổi dữ liệu sang DataFrame
-            df_search = pd.DataFrame(results)
-            
-            # Chọn và đổi tên các cột cần thiết
-            if not df_search.empty:
-                # Xử lý dữ liệu an toàn (tránh lỗi nếu thiếu trường)
-                df_display = pd.DataFrame()
-                df_display['Icon'] = df_search.get('icon', '')
-                df_display['Tên App'] = df_search.get('title', 'No Title')
-                df_display['Nhà phát triển'] = df_search.get('developer', 'Unknown')
-                df_display['Điểm'] = df_search.get('score', 0)
-                df_display['Giá'] = df_search.get('priceText', 'Free')
-                df_display['ID'] = df_search.get('appId', '')
-
-                st.dataframe(
-                    df_display,
-                    use_container_width=True,
-                    column_config={
-                        "Icon": st.column_config.ImageColumn("Icon", width="small"),
-                        "Điểm": st.column_config.ProgressColumn("Rating", min_value=0, max_value=5, format="%.1f"),
-                        "ID": st.column_config.TextColumn("Package ID", width="medium"),
-                    },
-                    height=800 
-                )
     else: 
         st.warning("Không tìm thấy kết quả nào phù hợp. Hãy thử từ khóa khác.")
 
