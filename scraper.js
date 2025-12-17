@@ -75,13 +75,11 @@ async function scrapeCategoryList() {
         }
     };
 
-    // Quét song song 5 bảng xếp hạng (Thêm New Free & New Paid)
-    const [free, paid, gross, new_free, new_paid] = await Promise.all([
+    // Quét song song 3 bảng xếp hạng chính (Đã bỏ New Free & New Paid để tối ưu tốc độ)
+    const [free, paid, gross] = await Promise.all([
         fetchList(gplay.collection.TOP_FREE),
         fetchList(gplay.collection.TOP_PAID),
-        fetchList(gplay.collection.GROSSING),
-        fetchList(gplay.collection.TOP_FREE_NEW), // Mới
-        fetchList(gplay.collection.TOP_PAID_NEW)  // Mới
+        fetchList(gplay.collection.GROSSING)
     ]);
 
     let allApps = [];
@@ -97,8 +95,7 @@ async function scrapeCategoryList() {
     push(free, 'top_free');
     push(paid, 'top_paid');
     push(gross, 'top_grossing');
-    push(new_free, 'new_free');
-    push(new_paid, 'new_paid');
+    // Đã bỏ push new_free và new_paid
     
     fs.writeFileSync('data/raw_data.json', JSON.stringify(allApps));
 }

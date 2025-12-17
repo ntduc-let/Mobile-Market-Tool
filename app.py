@@ -520,23 +520,30 @@ if st.session_state.view_mode == 'list':
         st.divider()
 
         if view_type == "📱 Dạng Thẻ (Grid)":
-            # Tab phân loại bộ sưu tập
-            t1, t2, t3, t4, t5 = st.tabs(["🔥 Top Free", "💸 Top Paid", "💰 Grossing", "✨ New Free", "💎 New Paid"])
-            
-            def render_grid(collection_name, key_suffix):
-                subset = df[df['collection_type'] == collection_name].sort_values('rank')
-                if not subset.empty:
-                    cols = st.columns(3) # Grid 3 cột
-                    for i, r in enumerate(subset.to_dict('records')):
-                         with cols[i % 3]:
-                             render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
-                else: st.info("Không có dữ liệu cho mục này.")
+            # --- CODE MỚI (SENSOR TOWER STYLE) ---
+            # Chia màn hình thành 3 cột lớn
+            col_free, col_paid, col_gross = st.columns(3)
 
-            with t1: render_grid('top_free', 'tf')
-            with t2: render_grid('top_paid', 'tp')
-            with t3: render_grid('top_grossing', 'tg')
-            with t4: render_grid('new_free', 'nf')
-            with t5: render_grid('new_paid', 'np')
+            # Hàm render danh sách dọc (không chia cột con nữa)
+            def render_vertical_list(container, header_title, collection_name, key_suffix, header_color):
+                with container:
+                    # Tiêu đề cột
+                    st.markdown(f"<h3 style='text-align: center; color: {header_color}; margin-bottom: 20px;'>{header_title}</h3>", unsafe_allow_html=True)
+                    
+                    # Lọc dữ liệu
+                    subset = df[df['collection_type'] == collection_name].sort_values('rank')
+                    
+                    if not subset.empty:
+                        # Render từng thẻ xếp chồng lên nhau (Vertical Stack)
+                        for i, r in enumerate(subset.to_dict('records')):
+                            render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
+                    else:
+                        st.info("Chưa có dữ liệu.")
+
+            # Gọi hàm render cho 3 cột
+            render_vertical_list(col_free, "🔥 Top Free", "top_free", "tf", "#4caf50")       # Màu xanh lá
+            render_vertical_list(col_paid, "💸 Top Paid", "top_paid", "tp", "#64b5f6")       # Màu xanh dương
+            render_vertical_list(col_gross, "💰 Grossing", "top_grossing", "tg", "#ffbd45")  # Màu vàng
 
         else: # Dạng Bảng (Table View) - Rất tốt để so sánh chỉ số
             st.markdown("### 📋 Bảng tổng hợp chi tiết")
