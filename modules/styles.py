@@ -4,28 +4,20 @@ import streamlit as st
 def load_css():
     st.markdown("""
     <style>
-        /* --- Global Reset --- */
         .stApp { background-color: #0e1117; }
         
-        /* --- 1. CARD TOP (INFO PART) --- */
+        /* --- CARD TOP --- */
         .app-card-top {
             background: linear-gradient(145deg, #1e2028, #242730);
-            /* Chỉ bo góc trên trái và trên phải */
             border-radius: 16px 16px 0 0; 
             padding: 16px 20px;
-            
-            /* Xóa khoảng cách dưới để nối với nút */
             margin-bottom: 0px !important; 
             border: 1px solid rgba(255, 255, 255, 0.08);
-            border-bottom: 1px solid rgba(255,255,255,0.05); /* Viền mờ ngăn cách nhẹ */
-            
-            display: grid;
-            grid-template-columns: 50px 80px 1fr;
-            gap: 20px;
-            align-items: center;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            display: grid; grid-template-columns: 50px 80px 1fr; gap: 20px; align-items: center;
         }
 
-        /* --- 2. CARD ELEMENTS --- */
+        /* Elements */
         .rank-badge { font-size: 1.8em; font-weight: 900; text-align: center; opacity: 0.9; font-family: 'Segoe UI', sans-serif; }
         .app-icon-opt { width: 80px; height: 80px; border-radius: 18px; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
         .app-info-col { display: flex; flex-direction: column; gap: 6px; overflow: hidden; justify-content: center; }
@@ -37,44 +29,37 @@ def load_css():
         .meta-pill.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.2); }
         .meta-pill.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.2); }
 
-        /* --- 3. MAGIC BUTTONS (CARD FOOTER) --- */
-        
-        /* Reset style mặc định của nút */
+        /* --- BUTTONS FIX --- */
         div[data-testid="stLinkButton"] a, div[data-testid="stButton"] button {
             width: 100%;
             border: 1px solid rgba(255,255,255,0.08);
-            border-top: none !important; /* Bỏ viền trên để nối với card */
-            background-color: #1e2028; /* Màu nền trùng với Card Top */
+            border-top: none !important;
+            background-color: #1e2028;
             color: #b0b3b8;
             font-weight: 600;
             font-size: 0.9em;
             transition: all 0.2s;
             height: 45px;
-            margin-top: -15px !important; /* Kéo lên dính vào card trên */
-            border-radius: 0; /* Mặc định vuông góc */
+            margin-top: -16px !important; /* Kéo lên dính vào card */
+            border-radius: 0;
         }
         
-        /* --- KỸ THUẬT BO GÓC RIÊNG BIỆT --- */
-        
-        /* Cột bên trái (Nút Google Play): Bo góc dưới trái */
+        /* [UPDATE] Bo góc khi có gap="small" */
+        /* Nút Trái: Bo góc dưới trái */
         div[data-testid="column"]:nth-of-type(1) div[data-testid="stLinkButton"] a {
             border-radius: 0 0 0 16px !important;
-            border-right: 1px solid rgba(255,255,255,0.05) !important; /* Vách ngăn giữa 2 nút */
+            /* Đã xóa border-right thủ công vì gap="small" đã tạo khoảng cách */
         }
 
-        /* Cột bên phải (Nút Xem): Bo góc dưới phải */
+        /* Nút Phải: Bo góc dưới phải */
         div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button {
             border-radius: 0 0 16px 0 !important;
-            border-left: none !important;
+             /* Đã xóa border-left thủ công */
         }
 
-        /* Hiệu ứng Hover */
-        div[data-testid="stLinkButton"] a:hover {
-            background-color: #2e7d32 !important; color: white !important;
-        }
-        div[data-testid="stButton"] button:hover {
-            background-color: #1565c0 !important; color: white !important;
-        }
+        /* Hover Effects */
+        div[data-testid="stLinkButton"] a:hover { background-color: #2e7d32 !important; color: white !important; }
+        div[data-testid="stButton"] button:hover { background-color: #1565c0 !important; color: white !important; }
 
         /* --- Detail Header --- */
         .hero-header {

@@ -39,7 +39,7 @@ def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
 
     # 2. PHẦN DƯỚI (BUTTONS) - KHÔNG viền màu bên trái
     # Quan trọng: gap="0" để 2 nút dính liền nhau
-    c1, c2 = st.columns(2, gap="0")
+    c1, c2 = st.columns(2, gap="small")
     
     with c1:
         # Nút Link (Store) -> Tự động bo góc dưới-trái nhờ CSS
