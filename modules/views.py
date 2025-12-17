@@ -119,29 +119,35 @@ def render_detail_view(target_cat_default):
             score = int(r.get('score', 0))
             stars = "⭐" * score
             date = r.get('date', '')
-            text = r.get('text', '').replace("<", "&lt;").replace(">", "&gt;") # Fix lỗi nếu comment chứa ký tự lạ
+            
+            # Xử lý nội dung comment: Thay thế xuống dòng bằng thẻ <br> để không vỡ layout
+            raw_text = r.get('text', '') or ''
+            text = raw_text.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+            
             likes = r.get('thumbsUp', 0)
             version = r.get('version', '')
             reply_text = r.get('replyText')
             reply_date = r.get('replyDate')
 
+            # Badge version: Nếu có thì hiện, không thì rỗng
             version_badge = f"<span class='rev-version'>v{version}</span>" if version else ""
             
+            # Xử lý Reply HTML: QUAN TRỌNG - VIẾT SÁT LỀ TRÁI TUYỆT ĐỐI
             reply_html = ""
             if reply_text:
-                # Fix lỗi ký tự lạ trong reply
-                safe_reply = reply_text.replace("<", "&lt;").replace(">", "&gt;")
+                safe_reply = reply_text.replace("<", "&lt;").replace(">", "&gt;").replace("\n", "<br>")
+                # Lưu ý: Các dòng dưới đây KHÔNG ĐƯỢC THỤT VÀO, phải sát lề trái của file
                 reply_html = f"""
-                <div class="dev-reply-box">
-                    <div class="dev-reply-header">
-                        <span>👨‍💻 Developer Response</span>
-                        <span>{reply_date}</span>
-                    </div>
-                    <div class="dev-reply-text">{safe_reply}</div>
-                </div>
-                """
+<div class="dev-reply-box">
+<div class="dev-reply-header">
+<span>👨‍💻 Developer Response</span>
+<span>{reply_date}</span>
+</div>
+<div class="dev-reply-text">{safe_reply}</div>
+</div>"""
 
-            # --- QUAN TRỌNG: HTML VIẾT SÁT LỀ TRÁI, KHÔNG THỤT DÒNG ---
+            # Tạo HTML tổng: QUAN TRỌNG - VIẾT SÁT LỀ TRÁI TUYỆT ĐỐI
+            # Không thụt dòng bất kỳ thẻ div nào
             review_html = f"""
 <div class="rev-container">
 <div class="rev-header">
