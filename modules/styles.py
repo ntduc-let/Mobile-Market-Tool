@@ -100,7 +100,24 @@ def load_css():
         .thumb-img { height: 300px; width: auto; display: block; }
         .lightbox-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999999; justify-content: center; align-items: center; cursor: zoom-out; }
         .lightbox-toggle:checked ~ .lightbox-overlay { display: flex; animation: fadeIn 0.2s ease-out; }
-        .full-img { width: 98vw; height: 98vh; object-fit: contain; }
+        .full-img {
+            position: fixed !important;  /* Ép vị trí cố định theo màn hình */
+            top: 50% !important;
+            left: 50% !important;
+            transform: translate(-50%, -50%) !important; /* Căn giữa tuyệt đối */
+            
+            width: 95vw !important;      /* Chiếm 95% chiều ngang màn hình */
+            height: 95vh !important;     /* Chiếm 95% chiều dọc màn hình */
+            
+            max-width: none !important;  /* Gỡ bỏ mọi giới hạn chiều rộng */
+            max-height: none !important; /* Gỡ bỏ mọi giới hạn chiều cao */
+            
+            object-fit: contain !important; /* Đảm bảo ảnh không bị méo */
+            z-index: 1000000 !important;    /* Đảm bảo luôn nằm trên cùng */
+            
+            background-color: transparent;  /* Nền trong suốt */
+            box-shadow: none !important;    /* Bỏ bóng đổ nếu có */
+        }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 
         /* Dashboard Header */
