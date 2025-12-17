@@ -177,6 +177,102 @@ if 'dev_apps' not in st.session_state: st.session_state.dev_apps = []
 # --- 5. CSS (GIAO DIỆN) ---
 st.markdown("""
 <style>
+    /* --- 1. Global Reset & Font --- */
+    .stApp { background-color: #0e1117; } /* Nền tối hơn */
+    
+    /* --- 2. Card Container Design --- */
+    .app-card-optimized {
+        background: linear-gradient(145deg, #1e222b, #262a35);
+        border-radius: 12px;
+        padding: 12px;
+        margin-bottom: 12px;
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
+        transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .app-card-optimized:hover {
+        transform: translateY(-4px) scale(1.02);
+        box-shadow: 0 10px 20px rgba(0,0,0,0.4);
+        border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    /* --- 3. Rank Badge (Số thứ tự) --- */
+    .rank-badge {
+        font-size: 1.5em;
+        font-weight: 900;
+        min-width: 35px;
+        text-align: center;
+        opacity: 0.9;
+        font-family: 'Segoe UI', sans-serif;
+    }
+
+    /* --- 4. App Icon --- */
+    .app-icon-opt {
+        width: 64px;
+        height: 64px;
+        border-radius: 14px; /* Bo góc kiểu Apple */
+        object-fit: cover;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        flex-shrink: 0;
+    }
+
+    /* --- 5. Info Section --- */
+    .app-info-opt {
+        flex-grow: 1;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+    }
+    
+    .app-title-opt {
+        font-size: 1em;
+        font-weight: 700;
+        color: #fff;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        margin-bottom: 4px;
+    }
+    
+    .app-dev-opt {
+        font-size: 0.8em;
+        color: #9aa0a6;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .app-meta-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-top: 6px;
+        font-size: 0.85em;
+    }
+
+    /* --- 6. Custom Buttons (Streamlit override) --- */
+    /* Làm nút bấm full chiều rộng và trong suốt phủ lên card để tạo cảm giác click vào card */
+    div[data-testid="stButton"] button {
+        border-radius: 8px;
+        border: 1px solid rgba(255,255,255,0.1);
+        background-color: transparent;
+        color: #ccc;
+        font-size: 0.8em;
+        padding: 2px 10px;
+        transition: all 0.2s;
+    }
+    div[data-testid="stButton"] button:hover {
+        border-color: #64b5f6;
+        color: #64b5f6;
+        background-color: rgba(100, 181, 246, 0.1);
+    }
     /* --- Giao diện thẻ Mini (List View) --- */
     .app-card-modern {
         background: linear-gradient(145deg, #1e2028, #23252e);
@@ -411,29 +507,36 @@ def run_node_safe_custom(mode, target, country, output_file, *extra_args):
     return []
 
 # --- 7. UI COMPONENTS ---
-def render_mini_card(app, country, rank_idx, key_prefix):
-    icon_url = app.get('icon', '') or 'https://via.placeholder.com/72?text=App'
-    title = app.get('title', 'Unknown Title')
-    publisher = app.get('developer', 'Unknown Dev')
+def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
+    icon_url = app.get('icon', '') or 'https://via.placeholder.com/64'
+    title = app.get('title', 'Unknown')
+    publisher = app.get('developer', 'Unknown')
     score = app.get('score', 0)
     rank = rank_idx + 1
     app_id_safe = app.get('app_id') or app.get('appId') or f"unknown_{rank}"
-    unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
     
+    # CSS động cho màu rank và viền trái
+    card_style = f"border-left: 4px solid {theme_color};"
+    rank_style = f"color: {theme_color};"
+
+    # HTML cấu trúc mới
     st.markdown(f"""
-    <div class="app-card-modern">
-        <div class="card-content-flex">
-            <div class="rank-number">#{rank}</div>
-            <img src="{icon_url}" class="app-icon-img">
-            <div class="app-info-box">
-                <div class="app-title-modern" title="{title}">{title}</div>
-                <div class="app-publisher-modern">{publisher}</div>
-                <div class="metric-score">⭐ {score:.1f}</div>
+    <div class="app-card-optimized" style="{card_style}">
+        <div class="rank-badge" style="{rank_style}">#{rank}</div>
+        <img src="{icon_url}" class="app-icon-opt">
+        <div class="app-info-opt">
+            <div class="app-title-opt" title="{title}">{title}</div>
+            <div class="app-dev-opt">{publisher}</div>
+            <div class="app-meta-row">
+                <span style="color:#ffbd45; font-weight:bold;">★ {score:.1f}</span>
             </div>
         </div>
     </div>
     """, unsafe_allow_html=True)
-    if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
+
+    # Nút bấm nhỏ gọn (Ghost Button) nằm ngay dưới card (hoặc bạn có thể styling lại)
+    unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
+    if st.button("🔍 Chi tiết", key=unique_key, use_container_width=True):
         st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
         st.session_state.view_mode = 'detail'
         st.rerun()
@@ -517,29 +620,36 @@ if st.session_state.view_mode == 'list':
         # --- BỎ st.radio VÀ LOGIC BẢNG, CHỈ GIỮ LẠI GRID 3 CỘT ---
         st.divider()
 
-        # Chia màn hình thành 3 cột lớn (Sensor Tower Style)
+        # Chia màn hình thành 3 cột lớn
         col_free, col_paid, col_gross = st.columns(3)
 
-        # Hàm render danh sách dọc
+        # Hàm render danh sách dọc (CẬP NHẬT THAM SỐ MÀU)
         def render_vertical_list(container, header_title, collection_name, key_suffix, header_color):
             with container:
-                # Tiêu đề cột
-                st.markdown(f"<h3 style='text-align: center; color: {header_color}; margin-bottom: 20px;'>{header_title}</h3>", unsafe_allow_html=True)
+                # Tiêu đề cột đẹp hơn
+                st.markdown(f"""
+                    <div style="text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid {header_color};">
+                        <h3 style="margin:0; color: {header_color}; text-shadow: 0 0 10px {header_color}80;">
+                            {header_title}
+                        </h3>
+                    </div>
+                """, unsafe_allow_html=True)
                 
                 # Lọc dữ liệu
                 subset = df[df['collection_type'] == collection_name].sort_values('rank')
                 
                 if not subset.empty:
-                    # Render từng thẻ xếp chồng lên nhau
                     for i, r in enumerate(subset.to_dict('records')):
-                        render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
+                        # ---> QUAN TRỌNG: Truyền header_color vào đây
+                        render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix, theme_color=header_color)
                 else:
                     st.info("Chưa có dữ liệu.")
 
-        # Gọi hàm render cho 3 cột
-        render_vertical_list(col_free, "🔥 Top Free", "top_free", "tf", "#4caf50")       
-        render_vertical_list(col_paid, "💸 Top Paid", "top_paid", "tp", "#64b5f6")       
-        render_vertical_list(col_gross, "💰 Grossing", "top_grossing", "tg", "#ffbd45")
+        # Gọi hàm với mã màu chuẩn
+        # Free: Xanh lá Neon | Paid: Xanh dương Neon | Grossing: Vàng/Cam Neon
+        render_vertical_list(col_free, "🔥 Top Free", "top_free", "tf", "#00e676")       
+        render_vertical_list(col_paid, "💸 Top Paid", "top_paid", "tp", "#2979ff")       
+        render_vertical_list(col_gross, "💰 Grossing", "top_grossing", "tg", "#ffab00")
 
     else: 
         st.info("👋 Chưa có dữ liệu ngày hôm nay. Hãy chọn số lượng và bấm '🚀 Quét Chart' ở thanh bên.")
