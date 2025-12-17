@@ -503,9 +503,9 @@ def render_detail_view(target_cat_default):
 </div>
 """
             
-            # Render Grid
-            final_html = f'<div class="tech-grid">{cards_html}</div>'
-            st.markdown(final_html, unsafe_allow_html=True)
+        # Render Grid
+        final_html = f'<div class="tech-grid">{cards_html}</div>'
+        st.markdown(final_html, unsafe_allow_html=True)
         
         # --- PHẦN 2: THÔNG TIN DEVELOPER ---
         st.markdown("#### 🏢 Nhà phát triển (Developer)")
