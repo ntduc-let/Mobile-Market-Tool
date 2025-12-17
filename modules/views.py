@@ -327,87 +327,75 @@ def render_detail_view(target_cat_default):
     with tab3:
         ds = d.get('dataSafety', {})
         
-        # Kiểm tra xem có dữ liệu không
-        if not ds or (not ds.get('sharedData') and not ds.get('collectedData') and not ds.get('securityPractices')):
-            st.info("🚫 Nhà phát triển không cung cấp thông tin chi tiết về An toàn dữ liệu cho ứng dụng này.")
-        else:
-            # 1. PHẦN TỔNG QUAN BẢO MẬT (Security Practices)
-            # Hiển thị các cam kết như: Mã hóa, Có thể xóa dữ liệu...
-            st.markdown("#### 🛡️ Cơ chế Bảo mật & Chính sách")
+        st.markdown("#### 🛡️ Cơ chế Bảo mật & Chính sách")
+        
+        sec_col, policy_col = st.columns([2, 1])
+        
+        with sec_col:
+            practices = ds.get('securityPractices', [])
+            if practices:
+                html_sec = '<div class="security-box">'
+                for p in practices:
+                    practice_text = p.get('practice', '') if isinstance(p, dict) else str(p)
+                    desc_text = p.get('description', '') if isinstance(p, dict) else ''
+                    full_text = f"<b>{practice_text}</b>"
+                    if desc_text: full_text += f": {desc_text}"
+                    html_sec += f'<div class="sec-item"><span class="sec-icon">✔</span><div>{full_text}</div></div>'
+                html_sec += '</div>'
+                st.markdown(html_sec, unsafe_allow_html=True)
+            else:
+                # Nếu không có thông tin thì hiện box xám báo chưa rõ, thay vì ẩn đi
+                st.warning("⚠️ Chưa có thông tin về quy trình mã hóa hoặc xóa dữ liệu.")
+        with policy_col:
+             privacy_url = d.get('privacyPolicy')
+             if privacy_url:
+                 st.info(f"📜 **Chính sách riêng tư**\n\n[Đọc tài liệu gốc tại đây]({privacy_url})")
+             else:
+                 st.error("❌ Không có Link chính sách.")
+        st.divider()
+        col_share, col_collect = st.columns(2)
+
+        def render_safety_card(items, is_collected=False):
+            if not items:
+                # Nếu rỗng -> Hiển thị trạng thái "Sạch" (Màu xanh) nhìn sẽ tích cực hơn lỗi đỏ
+                st.success("✅ Không có mục nào." if not is_collected else "✅ Không thu thập dữ liệu này.")
+                return
             
-            sec_col, policy_col = st.columns([2, 1])
-            
-            with sec_col:
-                practices = ds.get('securityPractices', [])
-                if practices:
-                    html_sec = '<div class="security-box">'
-                    for p in practices:
-                        # p có thể là dict hoặc string tùy version scraper
-                        practice_text = p.get('practice', '') if isinstance(p, dict) else str(p)
-                        desc_text = p.get('description', '') if isinstance(p, dict) else ''
-                        
-                        full_text = f"<b>{practice_text}</b>"
-                        if desc_text: full_text += f": {desc_text}"
-                        
-                        html_sec += f'<div class="sec-item"><span class="sec-icon">✔</span><div>{full_text}</div></div>'
-                    html_sec += '</div>'
-                    st.markdown(html_sec, unsafe_allow_html=True)
-                else:
-                    st.warning("⚠️ Không có thông tin về mã hóa hoặc quy trình xóa dữ liệu.")
-            with policy_col:
-                # Hiển thị nút Link Privacy Policy to đùng
-                privacy_url = d.get('privacyPolicy')
-                if privacy_url:
-                    st.info(f"📜 **Chính sách riêng tư**\n\n[Đọc tài liệu gốc tại đây]({privacy_url})")
-                else:
-                    st.error("❌ Không có đường dẫn Chính sách riêng tư.")
-            st.divider()
-            # 2. PHẦN CHI TIẾT DỮ LIỆU (Shared vs Collected)
-            col_share, col_collect = st.columns(2)
-            # --- HÀM RENDER ITEM ---
-            def render_safety_card(items, is_collected=False):
-                if not items:
-                    st.success("✅ Không có dữ liệu." if not is_collected else "✅ Không thu thập dữ liệu.")
-                    return
+            for item in items:
+                data_name = item.get('data', 'Unknown Data')
+                data_type = item.get('type', '')
+                purpose = item.get('purpose', 'Chưa rõ mục đích')
                 
-                for item in items:
-                    # Lấy thông tin an toàn
-                    data_name = item.get('data', 'Unknown Data') # VD: Location
-                    data_type = item.get('type', '')             # VD: Approximate Location
-                    purpose = item.get('purpose', 'Chưa rõ mục đích')
-                    
-                    # Xử lý badge Bắt buộc / Tùy chọn (Chỉ có ở Collected)
-                    optional_badge = ""
-                    if is_collected:
-                        is_optional = item.get('optional', False)
-                        if is_optional:
-                            optional_badge = "<span class='badge-opt'>Tùy chọn</span>"
-                        else:
-                            optional_badge = "<span class='badge-req'>Bắt buộc</span>"
-                    
-                    # Render HTML Card
-                    st.markdown(f"""
-                    <div class="data-item-card">
-                        <div class="data-head">
-                            <div>
-                                <div class="data-name">{data_name}</div>
-                                <div class="data-type">{data_type}</div>
-                            </div>
-                            {optional_badge}
+                optional_badge = ""
+                if is_collected:
+                    is_optional = item.get('optional', False)
+                    if is_optional:
+                        optional_badge = "<span class='badge-opt'>Tùy chọn</span>"
+                    else:
+                        optional_badge = "<span class='badge-req'>Bắt buộc</span>"
+                
+                st.markdown(f"""
+                <div class="data-item-card">
+                    <div class="data-head">
+                        <div>
+                            <div class="data-name">{data_name}</div>
+                            <div class="data-type">{data_type}</div>
                         </div>
-                        <div class="data-purpose">🎯 <b>Mục đích:</b> {purpose}</div>
+                        {optional_badge}
                     </div>
-                    """, unsafe_allow_html=True)
-            # --- CỘT 1: DỮ LIỆU CHIA SẺ (SHARED) ---
-            with col_share:
-                st.markdown("#### 📤 Dữ liệu chia sẻ (Data Shared)")
-                st.caption("Dữ liệu được chia sẻ với các công ty hoặc tổ chức khác.")
-                render_safety_card(ds.get('sharedData', []), is_collected=False)
-            # --- CỘT 2: DỮ LIỆU THU THẬP (COLLECTED) ---
-            with col_collect:
-                st.markdown("#### 📥 Dữ liệu thu thập (Data Collected)")
-                st.caption("Dữ liệu ứng dụng này thu thập từ điện thoại của bạn.")
-                render_safety_card(ds.get('collectedData', []), is_collected=True)
+                    <div class="data-purpose">🎯 <b>Mục đích:</b> {purpose}</div>
+                </div>
+                """, unsafe_allow_html=True)
+                
+        with col_share:
+            st.markdown("#### 📤 Dữ liệu chia sẻ")
+            st.caption("Dữ liệu chia sẻ với bên thứ 3.")
+            render_safety_card(ds.get('sharedData', []), is_collected=False)
+
+        with col_collect:
+            st.markdown("#### 📥 Dữ liệu thu thập")
+            st.caption("Dữ liệu ứng dụng thu thập.")
+            render_safety_card(ds.get('collectedData', []), is_collected=True)
 
     with tab4: # Competitors
         if st.session_state.similar_apps:
