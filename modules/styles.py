@@ -7,43 +7,31 @@ def load_css():
         /* --- Global Reset --- */
         .stApp { background-color: #0e1117; }
         
-        /* --- 1. BIG CARD DESIGN --- */
-        .app-card-optimized {
-            background: linear-gradient(145deg, #1e2028, #242730); /* Màu nền sâu hơn */
-            border-radius: 16px;        /* Bo góc to hơn */
-            padding: 16px 20px;         /* [TĂNG] Padding rộng hơn */
-            margin-bottom: 15px;
+        /* --- 1. CARD TOP (INFO PART) --- */
+        .app-card-top {
+            background: linear-gradient(145deg, #1e2028, #242730);
+            border-radius: 16px 16px 0 0; /* Chỉ bo góc trên */
+            padding: 16px 20px;
+            margin-bottom: 0px !important; /* Xóa khoảng cách dưới */
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
-            transition: transform 0.2s ease, box-shadow 0.2s ease;
+            border-bottom: none; /* Bỏ viền dưới để nối với nút */
             
-            /* Grid chia cột: Rank | Icon | Info */
+            /* Grid Layout */
             display: grid;
-            grid-template-columns: 50px 85px 1fr; /* [TĂNG] Cột Rank và Icon rộng hơn */
-            gap: 20px;                            /* [TĂNG] Khoảng cách giữa các phần tử */
+            grid-template-columns: 50px 80px 1fr;
+            gap: 20px;
             align-items: center;
-            min-height: 110px;                    /* [TĂNG] Chiều cao tối thiểu */
-        }
-        
-        .app-card-optimized:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
-            border-color: rgba(100, 181, 246, 0.4);
         }
 
-        /* --- 2. ELEMENTS SIZE UP --- */
+        /* --- 2. CARD ELEMENTS --- */
         .rank-badge { 
-            font-size: 1.8em;       /* [TĂNG] Số hạng to hơn */
-            font-weight: 900; 
-            text-align: center;
-            opacity: 0.8;
+            font-size: 1.8em; font-weight: 900; text-align: center; opacity: 0.9; 
             font-family: 'Segoe UI', sans-serif;
         }
         
         .app-icon-opt { 
-            width: 80px; height: 80px;  /* [TĂNG] Icon từ 64px lên 80px */
-            border-radius: 18px; 
-            object-fit: cover; 
+            width: 80px; height: 80px; 
+            border-radius: 18px; object-fit: cover; 
             box-shadow: 0 4px 8px rgba(0,0,0,0.3); 
         }
 
@@ -52,63 +40,52 @@ def load_css():
         }
         
         .app-title-opt { 
-            font-size: 1.25em;      /* [TĂNG] Tên App to rõ ràng */
-            font-weight: 700; 
-            color: #fff; 
-            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-            line-height: 1.3;
+            font-size: 1.25em; font-weight: 700; color: #fff; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3;
         }
         
         .app-dev-opt { 
-            font-size: 0.95em;      /* [TĂNG] Tên Dev */
-            color: #b0b3b8; 
+            font-size: 0.95em; color: #b0b3b8; 
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
         }
         
-        /* Meta Tags (Rating, Price, Store Link) */
         .meta-tags { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
-        
         .meta-pill {
             font-size: 0.8em; padding: 3px 10px; border-radius: 6px;
             background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1);
-            display: flex; align-items: center; gap: 5px; font-weight: 600;
+            font-weight: 600;
         }
-        
         .meta-pill.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.2); }
         .meta-pill.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.2); }
-        
-        /* Store Link (Small Text Link) */
-        .store-link-small {
-            color: #64b5f6; font-size: 0.85em; text-decoration: none; 
-            margin-left: 5px; opacity: 0.8; transition: opacity 0.2s;
-            display: flex; align-items: center; gap: 4px;
-        }
-        .store-link-small:hover { opacity: 1; text-decoration: underline; }
 
-        /* --- 3. GHOST BUTTON (CUSTOM STREAMLIT BUTTON) --- */
-        /* Tùy chỉnh nút bấm của Streamlit để trông xịn hơn */
-        div[data-testid="stButton"] button {
-            background-color: transparent !important;
-            border: 1px solid rgba(255,255,255,0.2) !important;
-            color: #e0e0e0 !important;
-            border-radius: 10px;
-            padding: 0.5rem 1rem;
-            font-weight: 600;
-            transition: all 0.2s ease-in-out;
-            height: 100%;
+        /* --- 3. BUTTONS DESIGN (CARD FOOTER) --- */
+        
+        /* Chỉnh sửa nút Link (Store) và Button (Xem) */
+        div[data-testid="stLinkButton"] a, div[data-testid="stButton"] button {
             width: 100%;
-        }
-
-        /* Hiệu ứng Hover cho nút */
-        div[data-testid="stButton"] button:hover {
-            border-color: #64b5f6 !important;
-            color: #64b5f6 !important;
-            background-color: rgba(100, 181, 246, 0.1) !important;
-            transform: scale(1.02);
+            border-radius: 0 0 12px 12px !important; /* Bo góc dưới */
+            border-top: none !important; /* Bỏ viền trên */
+            border: 1px solid rgba(255,255,255,0.1);
+            background-color: #242730; /* Màu nền trùng với Card */
+            color: #ccc;
+            font-weight: 600;
+            transition: all 0.2s;
+            height: 42px; /* Chiều cao cố định */
+            margin-top: -16px; /* Kỹ thuật quan trọng: Kéo nút lên dính vào card */
+            z-index: 1;
         }
         
-        div[data-testid="stButton"] button:active {
-            transform: scale(0.98);
+        /* Hiệu ứng Hover riêng biệt */
+        div[data-testid="stLinkButton"] a:hover {
+            background-color: #1b5e20 !important; /* Xanh lá đậm cho Store */
+            color: #fff !important;
+            border-color: #4caf50 !important;
+        }
+        
+        div[data-testid="stButton"] button:hover {
+            background-color: #0d47a1 !important; /* Xanh dương đậm cho Xem */
+            color: #fff !important;
+            border-color: #2979ff !important;
         }
 
         /* --- Detail Header --- */
@@ -144,60 +121,16 @@ def load_css():
         .full-img { width: 98vw; height: 98vh; object-fit: contain; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 
-        /* --- Dashboard Header Style --- */
+        /* Dashboard Header */
         .dashboard-header-container {
             background: linear-gradient(90deg, #1e222b 0%, #262a35 100%);
-            padding: 25px 30px;
-            border-radius: 16px;
-            border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2);
-            margin-bottom: 25px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            padding: 25px 30px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);
+            box-shadow: 0 4px 20px rgba(0,0,0,0.2); margin-bottom: 25px; display: flex; flex-direction: column; gap: 5px;
         }
-
-        .header-sub {
-            text-transform: uppercase;
-            font-size: 0.85rem;
-            letter-spacing: 1.5px;
-            font-weight: 700;
-            color: #64b5f6; /* Màu xanh dương nhạt */
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .header-main {
-            font-size: 2rem; /* Chữ to */
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.2;
-            background: -webkit-linear-gradient(45deg, #ffffff, #e0e0e0);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-        }
-
-        .header-badges {
-            display: flex;
-            gap: 12px;
-            margin-top: 10px;
-            flex-wrap: wrap;
-        }
-
-        .h-badge {
-            background: rgba(255, 255, 255, 0.05);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 6px 14px;
-            border-radius: 50px;
-            font-size: 0.9rem;
-            font-weight: 600;
-            color: #e0e0e0;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
+        .header-sub { text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1.5px; font-weight: 700; color: #64b5f6; display: flex; align-items: center; gap: 8px; }
+        .header-main { font-size: 2rem; font-weight: 800; color: #ffffff; line-height: 1.2; background: -webkit-linear-gradient(45deg, #ffffff, #e0e0e0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .header-badges { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
+        .h-badge { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px 14px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; color: #e0e0e0; }
         .h-badge.country { border-color: #ff4b4b; color: #ffbcbc; background: rgba(255, 75, 75, 0.1); }
         .h-badge.category { border-color: #4caf50; color: #b9f6ca; background: rgba(76, 175, 80, 0.1); }
     </style>

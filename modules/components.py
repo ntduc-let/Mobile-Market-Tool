@@ -2,7 +2,7 @@
 import streamlit as st
 
 def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
-    # Lấy dữ liệu an toàn
+    # Lấy dữ liệu
     icon_url = app.get('icon', '') or 'https://via.placeholder.com/80'
     title = app.get('title', 'Unknown')
     publisher = app.get('developer', 'Unknown')
@@ -12,18 +12,17 @@ def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
     rank = rank_idx + 1
     app_id_safe = app.get('app_id') or app.get('appId') or f"unknown_{rank}"
     
-    # Store URL
+    # URL Store
     store_url = f"https://play.google.com/store/apps/details?id={app_id_safe}&hl={country}"
 
     # Style động
     rank_style = f"color: {theme_color};"
-    border_style = f"border-left: 5px solid {theme_color};" # Viền dày hơn chút
+    border_style = f"border-left: 5px solid {theme_color};"
     price_text = "Free" if price == 0 else f"{price:,.0f} đ"
 
-    # --- HTML CONTENT (CHỈ CHỨA INFO, KHÔNG CHỨA BUTTON CHI TIẾT) ---
-    # Nút Store giờ là một link nhỏ gọn gàng bên cạnh giá/điểm
-    html_content = f"""
-    <div class="app-card-optimized" style="{border_style}">
+    # 1. PHẦN TRÊN (INFO CARD - HTML)
+    html_top = f"""
+    <div class="app-card-top" style="{border_style}">
         <div class="rank-badge" style="{rank_style}">#{rank}</div>
         <img src="{icon_url}" class="app-icon-opt">
         <div class="app-info-col">
@@ -32,32 +31,25 @@ def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
             <div class="meta-tags">
                 <span class="meta-pill score">⭐ {score:.1f}</span>
                 <span class="meta-pill price">{price_text}</span>
-                <a href="{store_url}" target="_blank" class="store-link-small">
-                    🌍 Google Play
-                </a>
             </div>
         </div>
     </div>
     """
+    st.markdown(html_top, unsafe_allow_html=True)
+
+    # 2. PHẦN DƯỚI (ACTION BUTTONS - PYTHON)
+    # Dùng columns(2) để chia đều chiều rộng
+    # gap="small" để tạo khe hở nhỏ giữa 2 nút
+    c1, c2 = st.columns(2, gap="small")
     
-    # --- LAYOUT RENDER ---
-    # Chia làm 2 cột: 
-    # Cột 1 (85%): Hiển thị Card thông tin (HTML)
-    # Cột 2 (15%): Hiển thị nút bấm "Chi tiết" (Streamlit Button)
-    
-    c_info, c_btn = st.columns([0.82, 0.18]) 
-    
-    with c_info:
-        st.markdown(html_content, unsafe_allow_html=True)
+    with c1:
+        # Nút Link (Store)
+        st.link_button("🌍 Google Play", store_url, use_container_width=True)
         
-    with c_btn:
-        # Hack CSS để căn giữa nút bấm theo chiều dọc so với card bên cạnh
-        # (Thêm khoảng trắng phía trên nút để đẩy nó xuống giữa)
-        st.markdown('<div style="height: 35px;"></div>', unsafe_allow_html=True)
-        
+    with c2:
+        # Nút Xem (Internal Logic)
         unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
-        # Dùng icon mũi tên hoặc kính lúp để nút gọn và đẹp
-        if st.button("🔍 Xem", key=unique_key, use_container_width=True):
+        if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
             st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
             st.session_state.view_mode = 'detail'
             st.rerun()
