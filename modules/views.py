@@ -480,33 +480,44 @@ def render_detail_view(target_cat_default):
         # --- PHẦN 1: THÔNG SỐ KỸ THUẬT (GRID VIEW) ---
         st.markdown("#### 📱 Thông số kỹ thuật")
         
-        # Định nghĩa danh sách thông số để render vòng lặp cho gọn và đẹp
-        specs = [
-            {"label": "App ID", "val": d.get('appId'), "icon": "🆔", "color": "bg-blue"},
-            {"label": "Phiên bản", "val": d.get('version') or 'Varies', "icon": "🚀", "color": "bg-green"},
-            {"label": "Cập nhật", "val": format_date_by_country(d.get('updated', 0), curr_country) if d.get('updated') else 'N/A', "icon": "📅", "color": "bg-orange"},
-            {"label": "Phát hành", "val": d.get('released') or 'N/A', "icon": "🎂", "color": "bg-pink"},
-            {"label": "Android OS", "val": d.get('androidVersion') or 'Varies', "icon": "🤖", "color": "bg-teal"},
-            {"label": "Độ tuổi", "val": d.get('contentRating') or 'Unrated', "icon": "🔞", "color": "bg-red"},
-            {"label": "Dung lượng", "val": d.get('size') or 'Varies', "icon": "💾", "color": "bg-purple"},
-            {"label": "Thể loại", "val": d.get('genre'), "icon": "🎮", "color": "bg-cyan"},
-        ]
-        # Tạo HTML từ danh sách trên
-        cards_html = ""
-        for s in specs:
-            cards_html += f"""
-            <div class="tech-card">
-                <div class="tc-icon-box {s['color']}">{s['icon']}</div>
-                <div class="tc-content">
-                    <span class="tc-label">{s['label']}</span>
-                    <span class="tc-value" title="{s['val']}">{s['val']}</span>
-                </div>
+        # Tạo HTML cho Grid
+        grid_html = f"""
+        <div class="info-grid-container">
+            <div class="info-box-item">
+                <span class="ib-label">📦 App ID (Package)</span>
+                <span class="ib-value">{d.get('appId')}</span>
             </div>
-            """
-        
-        # Render Grid
-        final_html = f'<div class="tech-grid">{cards_html}</div>'
-        st.markdown(final_html, unsafe_allow_html=True)
+            <div class="info-box-item">
+                <span class="ib-label">🚀 Version</span>
+                <span class="ib-value">{d.get('version') or 'Varies with device'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">📅 Cập nhật lần cuối</span>
+                <span class="ib-value">{format_date_by_country(d.get('updated', 0), curr_country) if d.get('updated') else 'N/A'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🎂 Ngày phát hành</span>
+                <span class="ib-value">{d.get('released') or 'N/A'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🤖 Android Yêu cầu</span>
+                <span class="ib-value">{d.get('androidVersion') or 'Varies'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🔞 Content Rating</span>
+                <span class="ib-value">{d.get('contentRating') or 'Unrated'}</span>
+            </div>
+             <div class="info-box-item">
+                <span class="ib-label">💾 Dung lượng</span>
+                <span class="ib-value">{d.get('size') or 'Varies with device'}</span>
+            </div>
+            <div class="info-box-item">
+                <span class="ib-label">🏷️ Thể loại</span>
+                <span class="ib-value">{d.get('genre')}</span>
+            </div>
+        </div>
+        """
+        st.markdown(grid_html, unsafe_allow_html=True)
         
         # --- PHẦN 2: THÔNG TIN DEVELOPER ---
         st.markdown("#### 🏢 Nhà phát triển (Developer)")

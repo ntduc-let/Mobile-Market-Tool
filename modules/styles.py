@@ -220,82 +220,74 @@ def load_css():
         .badge-req { background: rgba(255, 75, 75, 0.2); color: #ff8a80; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(255, 75, 75, 0.3); }
         .badge-opt { background: rgba(105, 240, 174, 0.2); color: #b9f6ca; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(105, 240, 174, 0.3); }
         
-        /* --- NEW: MODERN TECH SPECS UI --- */
-        
-        .tech-grid {
+        /* --- MỚI: CSS CHO TAB INFO --- */
+        /* 1. Grid chứa thông tin kỹ thuật */
+        .info-grid-container {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); /* Tự động chia cột, tối thiểu 240px */
-            gap: 16px;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
             margin-bottom: 25px;
         }
-
-        .tech-card {
-            background: #191c24;
+        
+        .info-box-item {
+            background-color: #1e2028;
             border: 1px solid rgba(255,255,255,0.05);
             border-radius: 12px;
-            padding: 16px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
-        }
-
-        /* Hiệu ứng Hover: Nổi lên và viền sáng */
-        .tech-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            border-color: rgba(255,255,255,0.15);
-            background: #20232b;
-        }
-
-        /* Phần Icon bên trái */
-        .tc-icon-box {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-            background: rgba(255,255,255,0.05); /* Mặc định */
-        }
-
-        /* Phần nội dung bên phải */
-        .tc-content {
+            padding: 15px;
             display: flex;
             flex-direction: column;
-            gap: 2px;
-            overflow: hidden; /* Cắt chữ nếu quá dài */
+            gap: 5px;
+            transition: transform 0.2s;
         }
-
-        .tc-label {
-            font-size: 0.75rem;
+        .info-box-item:hover {
+            border-color: #64b5f6;
+            transform: translateY(-2px);
+            background-color: #232630;
+        }
+        
+        .ib-label {
+            font-size: 0.8rem;
             text-transform: uppercase;
-            letter-spacing: 1px;
             color: #8b949e;
             font-weight: 600;
+            letter-spacing: 0.5px;
         }
-
-        .tc-value {
-            font-size: 0.95rem;
-            font-weight: 700;
+        
+        .ib-value {
+            font-size: 1rem;
             color: #e6edf3;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis; /* Hiện dấu ... nếu dài */
+            font-weight: 700;
+            word-break: break-word;
         }
+        
+        /* 2. Developer Contact Card */
+        .dev-contact-card {
+            background: linear-gradient(145deg, #161b22, #0d1117);
+            border-left: 4px solid #f78c6c; /* Màu cam */
+            padding: 20px;
+            border-radius: 0 12px 12px 0;
+            margin-bottom: 25px;
+        }
+        .dev-row {
+            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
+            color: #c9d1d9; font-size: 0.95rem;
+        }
+        .dev-row a { color: #58a6ff; text-decoration: none; }
+        .dev-row a:hover { text-decoration: underline; }
+        .dev-icon { width: 20px; text-align: center; color: #f78c6c; }
 
-        /* --- MÀU SẮC RIÊNG CHO TỪNG ICON (Gradient nhẹ) --- */
-        .bg-blue   { background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(33, 150, 243, 0.05)); color: #64b5f6; }
-        .bg-green  { background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.05)); color: #81c784; }
-        .bg-orange { background: linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 152, 0, 0.05)); color: #ffb74d; }
-        .bg-purple { background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(156, 39, 176, 0.05)); color: #ba68c8; }
-        .bg-red    { background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.05)); color: #e57373; }
-        .bg-cyan   { background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(0, 188, 212, 0.05)); color: #4dd0e1; }
-        .bg-pink   { background: linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(233, 30, 99, 0.05)); color: #f06292; }
-        .bg-teal   { background: linear-gradient(135deg, rgba(0, 150, 136, 0.2), rgba(0, 150, 136, 0.05)); color: #4db6ac; }   
+        /* 3. Description Styling */
+        .desc-container {
+            background-color: #161b22;
+            padding: 20px;
+            border-radius: 12px;
+            border: 1px solid rgba(255,255,255,0.05);
+            color: #c9d1d9;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        /* Style cho HTML description từ Google trả về */
+        .desc-container h2, .desc-container h3 { color: #fff; margin-top: 15px; margin-bottom: 10px; }
+        .desc-container b { color: #e6edf3; }        
         </style>
     """, unsafe_allow_html=True)
