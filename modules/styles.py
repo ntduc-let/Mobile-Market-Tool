@@ -4,75 +4,111 @@ import streamlit as st
 def load_css():
     st.markdown("""
     <style>
-        /* --- Global --- */
+        /* --- Global Reset --- */
         .stApp { background-color: #0e1117; }
         
-        /* --- Card Design --- */
+        /* --- 1. BIG CARD DESIGN --- */
         .app-card-optimized {
-            background: linear-gradient(145deg, #1e222b, #262a35);
-            border-radius: 12px;
-            padding: 12px;
-            margin-bottom: 12px;
+            background: linear-gradient(145deg, #1e2028, #242730); /* Màu nền sâu hơn */
+            border-radius: 16px;        /* Bo góc to hơn */
+            padding: 16px 20px;         /* [TĂNG] Padding rộng hơn */
+            margin-bottom: 15px;
             border: 1px solid rgba(255, 255, 255, 0.08);
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.2);
-            transition: all 0.3s ease;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            transition: transform 0.2s ease, box-shadow 0.2s ease;
             
-            /* Dùng Grid để chia bố cục: Rank | Icon | Info | Actions */
+            /* Grid chia cột: Rank | Icon | Info */
             display: grid;
-            grid-template-columns: 40px 64px 1fr auto; 
-            gap: 15px;
+            grid-template-columns: 50px 85px 1fr; /* [TĂNG] Cột Rank và Icon rộng hơn */
+            gap: 20px;                            /* [TĂNG] Khoảng cách giữa các phần tử */
             align-items: center;
+            min-height: 110px;                    /* [TĂNG] Chiều cao tối thiểu */
         }
         
         .app-card-optimized:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.4);
-            border-color: rgba(100, 181, 246, 0.5); /* Viền sáng khi hover */
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0,0,0,0.5);
+            border-color: rgba(100, 181, 246, 0.4);
         }
 
-        /* Rank */
-        .rank-badge { font-size: 1.5em; font-weight: 900; text-align: center; }
+        /* --- 2. ELEMENTS SIZE UP --- */
+        .rank-badge { 
+            font-size: 1.8em;       /* [TĂNG] Số hạng to hơn */
+            font-weight: 900; 
+            text-align: center;
+            opacity: 0.8;
+            font-family: 'Segoe UI', sans-serif;
+        }
         
-        /* Icon */
-        .app-icon-opt { width: 64px; height: 64px; border-radius: 14px; object-fit: cover; box-shadow: 0 2px 5px rgba(0,0,0,0.3); }
+        .app-icon-opt { 
+            width: 80px; height: 80px;  /* [TĂNG] Icon từ 64px lên 80px */
+            border-radius: 18px; 
+            object-fit: cover; 
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3); 
+        }
+
+        .app-info-col { 
+            display: flex; flex-direction: column; gap: 6px; overflow: hidden; justify-content: center;
+        }
         
-        /* Info Column */
-        .app-info-col { display: flex; flex-direction: column; gap: 4px; overflow: hidden; }
-        .app-title-opt { font-size: 1.05em; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        .app-dev-opt { font-size: 0.85em; color: #a0a0a0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .app-title-opt { 
+            font-size: 1.25em;      /* [TĂNG] Tên App to rõ ràng */
+            font-weight: 700; 
+            color: #fff; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            line-height: 1.3;
+        }
         
-        /* Meta Tags Row */
-        .meta-tags { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin-top: 2px; }
-        .meta-tag { 
-            font-size: 0.75em; padding: 2px 8px; border-radius: 4px; 
+        .app-dev-opt { 
+            font-size: 0.95em;      /* [TĂNG] Tên Dev */
+            color: #b0b3b8; 
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis; 
+        }
+        
+        /* Meta Tags (Rating, Price, Store Link) */
+        .meta-tags { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
+        
+        .meta-pill {
+            font-size: 0.8em; padding: 3px 10px; border-radius: 6px;
             background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1);
+            display: flex; align-items: center; gap: 5px; font-weight: 600;
+        }
+        
+        .meta-pill.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.2); }
+        .meta-pill.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.2); }
+        
+        /* Store Link (Small Text Link) */
+        .store-link-small {
+            color: #64b5f6; font-size: 0.85em; text-decoration: none; 
+            margin-left: 5px; opacity: 0.8; transition: opacity 0.2s;
             display: flex; align-items: center; gap: 4px;
         }
-        .meta-tag.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.3); }
-        .meta-tag.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.3); }
-        
-        /* Action Column (Right Side) */
-        .app-actions-col { 
-            display: flex; flex-direction: column; gap: 8px; 
-            min-width: 100px; /* Đảm bảo nút không bị bóp méo */
-        }
-        
-        /* Custom Buttons */
-        .btn-store {
-            text-decoration: none;
-            display: flex; justify-content: center; align-items: center; gap: 6px;
-            background: rgba(255,255,255,0.05); color: #ccc;
-            padding: 6px 12px; border-radius: 6px; font-size: 0.8em;
-            transition: all 0.2s; border: 1px solid rgba(255,255,255,0.1);
-        }
-        .btn-store:hover { background: #fff; color: #000; border-color: #fff; }
-                
-        /* --- Button Override --- */
+        .store-link-small:hover { opacity: 1; text-decoration: underline; }
+
+        /* --- 3. GHOST BUTTON (CUSTOM STREAMLIT BUTTON) --- */
+        /* Tùy chỉnh nút bấm của Streamlit để trông xịn hơn */
         div[data-testid="stButton"] button {
+            background-color: transparent !important;
+            border: 1px solid rgba(255,255,255,0.2) !important;
+            color: #e0e0e0 !important;
+            border-radius: 10px;
+            padding: 0.5rem 1rem;
+            font-weight: 600;
+            transition: all 0.2s ease-in-out;
+            height: 100%;
             width: 100%;
-            border-radius: 6px;
-            font-size: 0.8em;
-            padding: 0.4rem 0.8rem;
+        }
+
+        /* Hiệu ứng Hover cho nút */
+        div[data-testid="stButton"] button:hover {
+            border-color: #64b5f6 !important;
+            color: #64b5f6 !important;
+            background-color: rgba(100, 181, 246, 0.1) !important;
+            transform: scale(1.02);
+        }
+        
+        div[data-testid="stButton"] button:active {
+            transform: scale(0.98);
         }
 
         /* --- Detail Header --- */
