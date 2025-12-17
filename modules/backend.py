@@ -1,4 +1,3 @@
-# modules/backend.py
 import os
 import shutil
 import subprocess
@@ -47,6 +46,24 @@ def run_node_safe(mode, target, country, output_file, token=None, limit=None):
         print(f"Error: {e}")
         return None
     return None
+
+def run_node_safe_custom(mode, target, country, output_file, *extra_args):
+    file_path = f"data/{output_file}"
+    if os.path.exists(file_path): 
+        try: os.remove(file_path)
+        except: pass
+    try:
+        # Xây dựng câu lệnh: node scraper.js MODE TARGET COUNTRY ARG1 ARG2 ...
+        cmd = ["node", NODE_SCRIPT, mode, target, country] + list(extra_args)
+        subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=90)
+        
+        if os.path.exists(file_path):
+            with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
+    except Exception as e: 
+        print(f"Node Error: {e}")
+        return []
+    return []
+# -----------------------------------------
 
 def save_data_to_db(category_id, country_code):
     try:
