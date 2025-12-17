@@ -115,5 +115,46 @@ def load_css():
         .h-badge { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px 14px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; color: #e0e0e0; }
         .h-badge.country { border-color: #ff4b4b; color: #ffbcbc; background: rgba(255, 75, 75, 0.1); }
         .h-badge.category { border-color: #4caf50; color: #b9f6ca; background: rgba(76, 175, 80, 0.1); }
+                
+        /* --- REVIEW CARD CHI TIẾT --- */
+        .rev-container {
+            background-color: #1e2028;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 15px;
+            border: 1px solid rgba(255,255,255,0.05);
+        }
+        .rev-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
+        .rev-user-info { display: flex; gap: 12px; align-items: center; }
+        .rev-avatar { 
+            width: 40px; height: 40px; border-radius: 50%; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Avatar giả gradient */
+            display: flex; align-items: center; justify-content: center;
+            font-weight: bold; color: white; font-size: 1.2em;
+        }
+        .rev-name { font-weight: 700; color: #fff; font-size: 0.95em; }
+        .rev-date { font-size: 0.8em; color: #888; }
+        
+        .rev-star-row { color: #ffbd45; margin-bottom: 8px; font-size: 1.1em; display: flex; gap: 10px; align-items: center; }
+        .rev-version { 
+            font-size: 0.75em; padding: 2px 8px; border-radius: 4px; 
+            background: #2d3748; color: #a0aec0; border: 1px solid #4a5568; 
+        }
+        
+        .rev-text { color: #e2e8f0; line-height: 1.5; font-size: 0.95em; margin-bottom: 12px; white-space: pre-wrap; }
+        
+        .rev-footer { display: flex; gap: 15px; font-size: 0.85em; color: #718096; align-items: center; }
+        .rev-like { display: flex; align-items: center; gap: 5px; cursor: default; }
+        
+        /* Box trả lời của Developer */
+        .dev-reply-box {
+            margin-top: 15px;
+            background-color: #232a3b; /* Nền đậm hơn */
+            border-left: 3px solid #64b5f6;
+            padding: 12px 15px;
+            border-radius: 0 8px 8px 0;
+        }
+        .dev-reply-header { font-size: 0.85em; font-weight: 700; color: #64b5f6; margin-bottom: 5px; display: flex; justify-content: space-between; }
+        .dev-reply-text { font-size: 0.9em; color: #cbd5e0; font-style: italic; }
     </style>
     """, unsafe_allow_html=True)

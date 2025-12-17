@@ -35,15 +35,21 @@ def run_node_safe(mode, target, country, output_file, token=None, limit=None):
         except: pass
     
     cmd = ["node", NODE_SCRIPT, mode, target, country]
-    if token: cmd.append(token)
-    if limit: cmd.append(str(limit))
+    
+    # Quan trọng: Nếu token có giá trị, thêm vào args. Nếu không thì KHÔNG thêm (tránh lỗi undefined string)
+    if token: 
+        cmd.append(str(token))
+    
+    # Limit chỉ dùng cho list/search, Detail không dùng limit kiểu này
+    if limit:
+        cmd.append(str(limit))
     
     try:
         subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=120)
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error Node: {e}")
         return None
     return None
 
@@ -53,15 +59,11 @@ def run_node_safe_custom(mode, target, country, output_file, *extra_args):
         try: os.remove(file_path)
         except: pass
     try:
-        # Xây dựng câu lệnh: node scraper.js MODE TARGET COUNTRY ARG1 ARG2 ...
         cmd = ["node", NODE_SCRIPT, mode, target, country] + list(extra_args)
         subprocess.run(cmd, capture_output=True, text=True, check=True, timeout=90)
-        
         if os.path.exists(file_path):
             with open(file_path, "r", encoding="utf-8") as f: return json.load(f)
-    except Exception as e: 
-        print(f"Node Error: {e}")
-        return []
+    except: return []
     return []
 # -----------------------------------------
 
