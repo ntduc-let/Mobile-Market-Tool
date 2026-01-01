@@ -1,55 +1,46 @@
-# modules/components.py
 import streamlit as st
 
 def render_mini_card(app, country, rank_idx, key_prefix, theme_color="#fff"):
-    icon_url = app.get('icon', '') or 'https://via.placeholder.com/80'
+    icon_url = app.get('icon', '')
     title = app.get('title', 'Unknown')
     publisher = app.get('developer', 'Unknown')
     score = app.get('score', 0)
     
-    # Nếu giá là None -> Gán bằng 0
+    # Xử lý giá
     raw_price = app.get('price')
     try:
         price = float(raw_price) if raw_price is not None else 0
-    except:
-        price = 0
+    except: price = 0
+    price_text = "FREE" if price == 0 else f"{price:,.0f} đ"
     
     rank = rank_idx + 1
-    app_id_safe = app.get('app_id') or app.get('appId') or f"unknown_{rank}"
-    store_url = f"https://play.google.com/store/apps/details?id={app_id_safe}&hl={country}"
-    
-    rank_style = f"color: {theme_color};"
-    border_style = f"border-left: 5px solid {theme_color};"
-    
-    # Logic hiển thị giá: Nếu = 0 thì hiện Free, nếu có giá thì hiện số tiền
-    price_text = "Free" if price == 0 else f"{price:,.0f} đ"
+    app_id = app.get('app_id') or app.get('appId') or f"u_{rank}"
 
-    # HTML INFO
-    html_top = f"""
-    <div class="app-card-top" style="{border_style}">
-        <div class="rank-badge" style="{rank_style}">#{rank}</div>
-        <img src="{icon_url}" class="app-icon-opt">
+    # Style màu sắc cho Rank (Top 1,2,3 nổi bật hơn)
+    rank_color = "#ffd700" if rank == 1 else "#c0c0c0" if rank == 2 else "#cd7f32" if rank == 3 else "var(--text-secondary)"
+
+    # HTML Card tối giản
+    html = f"""
+    <div class="app-card-top">
+        <div class="rank-badge" style="color: {rank_color};">#{rank}</div>
+        <img src="{icon_url}" class="app-icon-opt" loading="lazy">
         <div class="app-info-col">
             <div class="app-title-opt" title="{title}">{title}</div>
             <div class="app-dev-opt">{publisher}</div>
             <div class="meta-tags">
-                <span class="meta-pill score">⭐ {score:.1f}</span>
-                <span class="meta-pill price">{price_text}</span>
-                <a href="{store_url}" target="_blank" class="meta-pill store-btn">
-                    🌍 Google Play
-                </a>
+                <span class="meta-pill">⭐ {score:.1f}</span>
+                <span class="meta-pill" style="color: {'#3fb950' if price==0 else '#d29922'}">{price_text}</span>
             </div>
         </div>
     </div>
     """
-    st.markdown(html_top, unsafe_allow_html=True)
+    st.markdown(html, unsafe_allow_html=True)
 
-    # BUTTON FIX (Single Footer Button)
-    unique_key = f"btn_{key_prefix}_{rank}_{app_id_safe}"
-    
-    if st.button("🔍 Xem chi tiết", key=unique_key, use_container_width=True):
-        st.session_state.selected_app = {'app_id': app_id_safe, 'title': title, 'country_override': country}
+    # Nút bấm ẩn (invisible but clickable area) hoặc nút nhỏ gọn
+    # Ở đây em dùng st.button full width nhưng style CSS ở trên đã làm nó trong suốt và tinh tế
+    if st.button("Chi tiết", key=f"btn_{key_prefix}_{rank}_{app_id}", use_container_width=True):
+        st.session_state.selected_app = {'app_id': app_id, 'title': title, 'country_override': country}
         st.session_state.view_mode = 'detail'
         st.rerun()
-            
-    st.markdown("<div style='margin-bottom: 20px;'></div>", unsafe_allow_html=True)
+    
+    st.markdown("<div style='margin-bottom: 8px;'></div>", unsafe_allow_html=True)

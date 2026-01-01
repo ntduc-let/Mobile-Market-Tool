@@ -1,531 +1,99 @@
-# modules/styles.py
 import streamlit as st
 
 def load_css():
     st.markdown("""
     <style>
-        .stApp { background-color: #0e1117; }
+        /* --- 1. GLOBAL VARIABLES & RESET --- */
+        :root {
+            --bg-color: #0e1117;
+            --card-bg: #161b22; /* Github Dark Dimmed style */
+            --card-hover: #1f242e;
+            --border-color: rgba(240, 246, 252, 0.1);
+            --accent-primary: #58a6ff; /* Xanh dịu */
+            --text-primary: #c9d1d9;
+            --text-secondary: #8b949e;
+            --success: #3fb950;
+            --warning: #d29922;
+        }
+
+        .stApp { background-color: var(--bg-color); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
         
-        /* --- CARD TOP (INFO PART) --- */
-        .app-card-top {
-            background: linear-gradient(145deg, #1e2028, #242730);
-            border-radius: 16px; /* Bo tròn cả 4 góc */
-            padding: 16px 20px;
-            margin-bottom: 10px; /* Tạo khoảng cách với nút */
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            
-            display: grid; grid-template-columns: 50px 80px 1fr; gap: 20px; align-items: center;
-        }
-
-        /* --- ELEMENTS (Badge, Icon, Text...) --- */
-        .rank-badge { font-size: 1.8em; font-weight: 900; text-align: center; opacity: 0.9; font-family: 'Segoe UI', sans-serif; }
-        .app-icon-opt { width: 80px; height: 80px; border-radius: 18px; object-fit: cover; box-shadow: 0 4px 8px rgba(0,0,0,0.3); }
-        .app-info-col { display: flex; flex-direction: column; gap: 6px; overflow: hidden; justify-content: center; }
-        .app-title-opt { font-size: 1.25em; font-weight: 700; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; line-height: 1.3; }
-        .app-dev-opt { font-size: 0.95em; color: #b0b3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-        
-        .meta-tags { display: flex; gap: 10px; align-items: center; margin-top: 4px; }
-        .meta-pill { font-size: 0.8em; padding: 3px 10px; border-radius: 6px; background: rgba(255,255,255,0.05); color: #ccc; border: 1px solid rgba(255,255,255,0.1); font-weight: 600; }
-        .meta-pill.score { color: #ffbd45; border-color: rgba(255, 189, 69, 0.2); }
-        .meta-pill.price { color: #69f0ae; border-color: rgba(105, 240, 174, 0.2); }
-
-        /* --- NEW BUTTONS STYLE (OUTLINED PILLS) --- */
-        
-        /* 1. Cấu hình chung cho cả 2 nút */
-        div[data-testid="stLinkButton"] a, div[data-testid="stButton"] button {
-            width: 100%;
-            background-color: transparent !important; /* Nền trong suốt */
-            border-width: 1px !important;
-            border-style: solid !important;
-            font-weight: 700 !important;
-            border-radius: 8px !important; /* Bo góc giống Badge */
-            margin-top: -5px !important;   /* Kéo sát lên card trên */
-            height: 40px !important;
-            transition: all 0.3s ease !important;
-            text-transform: none !important;
-            display: flex; align-items: center; justify-content: center;
-        }
-
-        /* 2. Nút TRÁI (Google Play) -> Style giống thẻ FREE (Màu Xanh Lá) */
-        div[data-testid="column"]:nth-of-type(1) div[data-testid="stLinkButton"] a {
-            border-color: #69f0ae !important;
-            color: #69f0ae !important;
-        }
-        /* Hover hiệu ứng phát sáng xanh */
-        div[data-testid="column"]:nth-of-type(1) div[data-testid="stLinkButton"] a:hover {
-            background-color: rgba(105, 240, 174, 0.1) !important;
-            box-shadow: 0 0 10px rgba(105, 240, 174, 0.4) !important;
-            transform: translateY(-2px);
-        }
-
-        /* 3. Nút PHẢI (Chi tiết) -> Style giống thẻ STAR (Màu Vàng) */
-        div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button {
-            border-color: #ffbd45 !important;
-            color: #ffbd45 !important;
-        }
-        /* Hover hiệu ứng phát sáng vàng */
-        div[data-testid="column"]:nth-of-type(2) div[data-testid="stButton"] button:hover {
-            background-color: rgba(255, 189, 69, 0.1) !important;
-            box-shadow: 0 0 10px rgba(255, 189, 69, 0.4) !important;
-            transform: translateY(-2px);
-        }
-
-        /* --- Detail Header --- */
-        .hero-header {
-            position: relative; overflow: hidden; display: flex; gap: 25px; padding: 30px;
-            background: linear-gradient(180deg, rgba(30,32,40,0.85) 0%, rgba(30,32,40,1) 100%);
-            border-radius: 20px; border: 1px solid #3a3f4b; margin-bottom: 25px; align-items: center;
-        }
-        .hero-bg {
-            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-            background-size: cover; background-position: center; opacity: 0.2; z-index: -1; filter: blur(10px);
-        }
-        .hero-icon-big { width: 120px; height: 120px; border-radius: 24px; border: 2px solid #444; z-index: 2; }
-        .hero-title-text { font-size: 2.5em; font-weight: 800; color: #fff; margin: 0; line-height: 1.2; }
-
-        /* --- Metrics & Safety --- */
-        .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 25px; }
-        .metric-card-custom { background: #23252e; padding: 20px 15px; border-radius: 16px; text-align: center; border: 1px solid #333; }
-        .safety-item { background: #252730; padding: 12px; margin-bottom: 8px; border-radius: 8px; border-left: 3px solid #64b5f6; font-size: 0.95em; }
-        .review-card-modern { background-color: #2a2d3a; padding: 15px; border-radius: 12px; margin-bottom: 12px; border-left: 4px solid #ffbd45; }
-        .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.8em; font-weight: bold; margin-right: 6px; border: 1px solid rgba(255,255,255,0.1); display: inline-block;}
-        .badge-ad { background-color: rgba(230, 81, 0, 0.2); color: #ff9800; }
-        .badge-iap { background-color: rgba(27, 94, 32, 0.2); color: #4caf50; }
-
-        /* --- Screenshots Zoom --- */
-        .screenshot-container { overflow-x: auto; white-space: nowrap; padding-bottom: 15px; }
-        .lightbox-toggle { display: none !important; }
-        .thumb-label { display: inline-block; margin-right: 15px; cursor: zoom-in; transition: transform 0.2s; border: 1px solid #444; border-radius: 10px; overflow: hidden; }
-        .thumb-label:hover { transform: scale(1.02); border-color: #64b5f6; }
-        .thumb-img { height: 300px; width: auto; display: block; }
-        .lightbox-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0, 0, 0, 0.95); z-index: 999999; justify-content: center; align-items: center; cursor: zoom-out; }
-        .lightbox-toggle:checked ~ .lightbox-overlay { display: flex; animation: fadeIn 0.2s ease-out; }
-        .full-img {
-            position: fixed !important;  /* Ép vị trí cố định theo màn hình */
-            top: 50% !important;
-            left: 50% !important;
-            transform: translate(-50%, -50%) !important; /* Căn giữa tuyệt đối */
-
-            width: 95vw !important;      /* Chiếm 95% chiều ngang màn hình */
-            height: 95vh !important;     /* Chiếm 95% chiều dọc màn hình */
-
-            max-width: none !important;  /* Gỡ bỏ mọi giới hạn chiều rộng */
-            max-height: none !important; /* Gỡ bỏ mọi giới hạn chiều cao */
-
-            object-fit: contain !important; /* Đảm bảo ảnh không bị méo */
-            z-index: 1000000 !important;    /* Đảm bảo luôn nằm trên cùng */
-
-            background-color: transparent;  /* Nền trong suốt */
-            box-shadow: none !important;    /* Bỏ bóng đổ nếu có */
-        }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                
-        /* Dashboard Header */
-        .dashboard-header-container {
-            background: linear-gradient(90deg, #1e222b 0%, #262a35 100%);
-            padding: 25px 30px; border-radius: 16px; border: 1px solid rgba(255, 255, 255, 0.05);
-            box-shadow: 0 4px 20px rgba(0,0,0,0.2); margin-bottom: 25px; display: flex; flex-direction: column; gap: 5px;
-        }
-        .header-sub { text-transform: uppercase; font-size: 0.85rem; letter-spacing: 1.5px; font-weight: 700; color: #64b5f6; display: flex; align-items: center; gap: 8px; }
-        .header-main { font-size: 2rem; font-weight: 800; color: #ffffff; line-height: 1.2; background: -webkit-linear-gradient(45deg, #ffffff, #e0e0e0); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-        .header-badges { display: flex; gap: 12px; margin-top: 10px; flex-wrap: wrap; }
-        .h-badge { background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.1); padding: 6px 14px; border-radius: 50px; font-size: 0.9rem; font-weight: 600; color: #e0e0e0; }
-        .h-badge.country { border-color: #ff4b4b; color: #ffbcbc; background: rgba(255, 75, 75, 0.1); }
-        .h-badge.category { border-color: #4caf50; color: #b9f6ca; background: rgba(76, 175, 80, 0.1); }
-                
-        /* --- REVIEW CARD CHI TIẾT --- */
-        .rev-container {
-            background-color: #1e2028;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 15px;
-            border: 1px solid rgba(255,255,255,0.05);
-        }
-        .rev-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px; }
-        .rev-user-info { display: flex; gap: 12px; align-items: center; }
-        .rev-avatar { 
-            width: 40px; height: 40px; border-radius: 50%; 
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); /* Avatar giả gradient */
-            display: flex; align-items: center; justify-content: center;
-            font-weight: bold; color: white; font-size: 1.2em;
-        }
-        .rev-name { font-weight: 700; color: #fff; font-size: 0.95em; }
-        .rev-date { font-size: 0.8em; color: #888; }
-        
-        .rev-star-row { color: #ffbd45; margin-bottom: 8px; font-size: 1.1em; display: flex; gap: 10px; align-items: center; }
-        .rev-version { 
-            font-size: 0.75em; padding: 2px 8px; border-radius: 4px; 
-            background: #2d3748; color: #a0aec0; border: 1px solid #4a5568; 
-        }
-        
-        .rev-text { color: #e2e8f0; line-height: 1.5; font-size: 0.95em; margin-bottom: 12px; white-space: pre-wrap; }
-        
-        .rev-footer { display: flex; gap: 15px; font-size: 0.85em; color: #718096; align-items: center; }
-        .rev-like { display: flex; align-items: center; gap: 5px; cursor: default; }
-        
-        /* Box trả lời của Developer */
-        .dev-reply-box {
-            margin-top: 15px;
-            background-color: #232a3b; /* Nền đậm hơn */
-            border-left: 3px solid #64b5f6;
-            padding: 12px 15px;
-            border-radius: 0 8px 8px 0;
-        }
-        .dev-reply-header { font-size: 0.85em; font-weight: 700; color: #64b5f6; margin-bottom: 5px; display: flex; justify-content: space-between; }
-        .dev-reply-text { font-size: 0.9em; color: #cbd5e0; font-style: italic; }
-
-        /* --- DATA SAFETY STYLES (NEW) --- */
-
-        /* 1. Khung chứa Security Practices (Màu xanh bảo mật) */
-        .security-box {
-            background-color: rgba(27, 94, 32, 0.15); /* Nền xanh lá nhạt */
-            border: 1px solid #2e7d32;
-            border-radius: 10px;
-            padding: 15px;
-            margin-bottom: 20px;
-        }
-        .sec-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 10px;
-            margin-bottom: 8px;
-            color: #e8f5e9;
-            font-size: 0.95em;
-        }
-        .sec-icon { color: #69f0ae; font-size: 1.2em; margin-top: 2px; }
-
-        /* 2. Thẻ dữ liệu chi tiết (Data Card) */
-        .data-item-card {
-            background-color: #23252e;
-            border: 1px solid #3a3f4b;
-            border-radius: 10px;
-            padding: 12px;
-            margin-bottom: 10px;
+        /* --- 2. METRIC CARDS (DASHBOARD TOP) --- */
+        .kpi-card {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 16px;
+            text-align: center;
             transition: all 0.2s;
         }
-        .data-item-card:hover { border-color: #64b5f6; background-color: #2a2d36; }
+        .kpi-label { font-size: 0.85rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px; }
+        .kpi-value { font-size: 1.8rem; font-weight: 700; color: #fff; margin-top: 5px; }
 
-        .data-head { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 6px; }
-        .data-name { font-weight: 700; color: #fff; font-size: 0.95em; }
-        .data-type { color: #aaa; font-size: 0.85em; font-style: italic; }
-
-        .data-purpose { 
-            font-size: 0.85em; color: #ccc; 
-            background: rgba(255,255,255,0.05); 
-            padding: 6px; border-radius: 6px; margin-top: 6px; 
-            line-height: 1.4;
-        }
-
-        /* 3. Badges trạng thái */
-        .badge-req { background: rgba(255, 75, 75, 0.2); color: #ff8a80; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(255, 75, 75, 0.3); }
-        .badge-opt { background: rgba(105, 240, 174, 0.2); color: #b9f6ca; padding: 2px 8px; border-radius: 4px; font-size: 0.75em; border: 1px solid rgba(105, 240, 174, 0.3); }
-        
-        /* --- MỚI: CSS CHO TAB INFO --- */
-        /* 1. Grid chứa thông tin kỹ thuật */
-        .info-grid-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-        
-        .info-box-item {
-            background-color: #1e2028;
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
-            padding: 15px;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            transition: transform 0.2s;
-        }
-        .info-box-item:hover {
-            border-color: #64b5f6;
-            transform: translateY(-2px);
-            background-color: #232630;
-        }
-        
-        .ib-label {
-            font-size: 0.8rem;
-            text-transform: uppercase;
-            color: #8b949e;
-            font-weight: 600;
-            letter-spacing: 0.5px;
-        }
-        
-        .ib-value {
-            font-size: 1rem;
-            color: #e6edf3;
-            font-weight: 700;
-            word-break: break-word;
-        }
-        
-        /* 2. Developer Contact Card */
-        .dev-contact-card {
-            background: linear-gradient(145deg, #161b22, #0d1117);
-            border-left: 4px solid #f78c6c; /* Màu cam */
-            padding: 20px;
-            border-radius: 0 12px 12px 0;
-            margin-bottom: 25px;
-        }
-        .dev-row {
-            display: flex; align-items: center; gap: 10px; margin-bottom: 8px;
-            color: #c9d1d9; font-size: 0.95rem;
-        }
-        .dev-row a { color: #58a6ff; text-decoration: none; }
-        .dev-row a:hover { text-decoration: underline; }
-        .dev-icon { width: 20px; text-align: center; color: #f78c6c; }
-
-        /* 3. Description Styling */
-        .desc-container {
-            background-color: #161b22;
-            padding: 20px;
-            border-radius: 12px;
-            border: 1px solid rgba(255,255,255,0.05);
-            color: #c9d1d9;
-            line-height: 1.6;
-            font-size: 0.95rem;
-        }
-        /* Style cho HTML description từ Google trả về */
-        .desc-container h2, .desc-container h3 { color: #fff; margin-top: 15px; margin-bottom: 10px; }
-        .desc-container b { color: #e6edf3; }
-
-        /* --- NEW: BEAUTIFUL DEVELOPER CONTACT UI --- */
-        .dev-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); /* Tự động chia cột */
-            gap: 15px;
-            margin-bottom: 25px;
-        }
-
-        /* Style cho từng item liên hệ */
-        .dev-item {
-            background: #1e2028;
-            border: 1px solid rgba(255, 255, 255, 0.08);
-            border-radius: 12px;
-            padding: 15px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: all 0.3s ease;
-            text-decoration: none; /* Bỏ gạch chân cho thẻ a */
-            position: relative;
-            overflow: hidden;
-        }
-        
-        /* Hiệu ứng hover chung */
-        .dev-item:hover {
-            background: #232630;
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-
-        /* Icon box có màu nền riêng */
-        .di-icon-box {
-            width: 42px; height: 42px;
-            border-radius: 10px;
-            display: flex; align-items: center; justify-content: center;
-            font-size: 1.3rem; flex-shrink: 0;
-        }
-        /* Màu sắc riêng cho từng loại icon */
-        .di-id   { background: rgba(255, 152, 0, 0.15); color: #ff9800; } /* Cam */
-        .di-email{ background: rgba(244, 67, 54, 0.15); color: #f44336; } /* Đỏ */
-        .di-web  { background: rgba(33, 150, 243, 0.15); color: #2196f3; } /* Xanh dương */
-        .di-addr { background: rgba(76, 175, 80, 0.15); color: #4caf50; } /* Xanh lá */
-
-        /* Nội dung text */
-        .di-content { display: flex; flex-direction: column; gap: 2px; overflow: hidden; }
-        .di-label { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; color: #8b949e; font-weight: 600; }
-        .di-value { font-size: 0.95rem; font-weight: 500; color: #e6edf3; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-
-        /* Style riêng cho link (Email/Web) để trông actionable hơn */
-        a.dev-item { cursor: pointer; border-color: rgba(100, 181, 246, 0.2); }
-        a.dev-item:hover { border-color: rgba(100, 181, 246, 0.5); }
-        a.dev-item .di-value { color: #64b5f6; transition: color 0.2s; }
-        a.dev-item:hover .di-value { color: #9be7ff; text-decoration: underline; }
-
-        /* Description & Link styles (Giữ nguyên) */
-        .desc-container { background-color: #161b22; padding: 20px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); color: #c9d1d9; line-height: 1.6; font-size: 0.95rem; }
-        .desc-container h2, .desc-container h3 { color: #fff; margin-top: 15px; margin-bottom: 10px; }
-        .desc-container b { color: #e6edf3; }        
-                
-        .tech-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); /* Tự động chia cột, tối thiểu 240px */
-            gap: 16px;
-            margin-bottom: 25px;
-        }
-
-        .tech-card {
-            background: #191c24;
-            border: 1px solid rgba(255,255,255,0.05);
-            border-radius: 12px;
+        /* --- 3. APP MINI CARD (LIST VIEW) --- */
+        .app-card-top {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px; /* Bo góc vừa phải */
             padding: 16px;
-            display: flex;
-            align-items: center;
-            gap: 15px;
-            transition: all 0.3s ease;
-            position: relative;
-            overflow: hidden;
+            margin-bottom: 12px;
+            display: flex; gap: 16px; align-items: center;
+            transition: transform 0.2s, border-color 0.2s;
+        }
+        .app-card-top:hover {
+            transform: translateY(-2px);
+            border-color: var(--accent-primary);
+            background-color: var(--card-hover);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.2);
         }
 
-        /* Hiệu ứng Hover: Nổi lên và viền sáng */
-        .tech-card:hover {
-            transform: translateY(-4px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            border-color: rgba(255,255,255,0.15);
-            background: #20232b;
+        .rank-badge { 
+            min-width: 40px; height: 40px; 
+            display: flex; align-items: center; justify-content: center;
+            font-size: 1.2rem; font-weight: 700; color: var(--text-secondary);
+            background: rgba(255,255,255,0.03); border-radius: 8px;
+        }
+        
+        .app-icon-opt { 
+            width: 64px; height: 64px; /* Icon nhỏ lại chút cho tinh tế */
+            border-radius: 14px; 
+            object-fit: cover; border: 1px solid var(--border-color);
+        }
+        
+        .app-info-col { flex: 1; overflow: hidden; display: flex; flex-direction: column; gap: 4px; }
+        .app-title-opt { font-size: 1rem; font-weight: 600; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .app-dev-opt { font-size: 0.85rem; color: var(--text-secondary); }
+
+        .meta-tags { display: flex; gap: 8px; margin-top: 6px; }
+        .meta-pill { 
+            font-size: 0.75rem; padding: 2px 8px; border-radius: 4px; 
+            background: rgba(255,255,255,0.05); color: var(--text-primary); 
+            border: 1px solid rgba(255,255,255,0.1); display: flex; align-items: center; gap: 4px;
+        }
+        
+        /* Custom Button Override */
+        div[data-testid="stButton"] button {
+            border-radius: 8px; font-weight: 600; border: 1px solid var(--border-color);
+            background-color: transparent; color: var(--accent-primary);
+        }
+        div[data-testid="stButton"] button:hover {
+            border-color: var(--accent-primary); color: #fff; background: rgba(88, 166, 255, 0.1);
         }
 
-        /* Phần Icon bên trái */
-        .tc-icon-box {
-            width: 48px;
-            height: 48px;
-            border-radius: 12px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 1.5rem;
-            flex-shrink: 0;
-            background: rgba(255,255,255,0.05); /* Mặc định */
-        }
-
-        /* Phần nội dung bên phải */
-        .tc-content {
-            display: flex;
-            flex-direction: column;
-            gap: 2px;
-            overflow: hidden; /* Cắt chữ nếu quá dài */
-        }
-
-        .tc-label {
-            font-size: 0.75rem;
-            text-transform: uppercase;
-            letter-spacing: 1px;
-            color: #8b949e;
-            font-weight: 600;
-        }
-
-        .tc-value {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: #e6edf3;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis; /* Hiện dấu ... nếu dài */
-        }
-
-        /* --- MÀU SẮC RIÊNG CHO TỪNG ICON (Gradient nhẹ) --- */
-        .bg-blue   { background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(33, 150, 243, 0.05)); color: #64b5f6; }
-        .bg-green  { background: linear-gradient(135deg, rgba(76, 175, 80, 0.2), rgba(76, 175, 80, 0.05)); color: #81c784; }
-        .bg-orange { background: linear-gradient(135deg, rgba(255, 152, 0, 0.2), rgba(255, 152, 0, 0.05)); color: #ffb74d; }
-        .bg-purple { background: linear-gradient(135deg, rgba(156, 39, 176, 0.2), rgba(156, 39, 176, 0.05)); color: #ba68c8; }
-        .bg-red    { background: linear-gradient(135deg, rgba(244, 67, 54, 0.2), rgba(244, 67, 54, 0.05)); color: #e57373; }
-        .bg-cyan   { background: linear-gradient(135deg, rgba(0, 188, 212, 0.2), rgba(0, 188, 212, 0.05)); color: #4dd0e1; }
-        .bg-pink   { background: linear-gradient(135deg, rgba(233, 30, 99, 0.2), rgba(233, 30, 99, 0.05)); color: #f06292; }
-        .bg-teal   { background: linear-gradient(135deg, rgba(0, 150, 136, 0.2), rgba(0, 150, 136, 0.05)); color: #4db6ac; }
-                
-        /* --- NEW: CINEMATIC HERO HEADER --- */
+        /* --- 4. HERO HEADER (DETAIL VIEW) --- */
         .hero-container {
-            position: relative;
-            background-color: #161b22;
-            border-radius: 24px;
-            overflow: hidden;
-            margin-bottom: 25px;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
-            border: 1px solid rgba(255,255,255,0.1);
+            position: relative; border-radius: 16px; overflow: hidden; margin-bottom: 24px;
+            border: 1px solid var(--border-color); background: #0d1117;
         }
+        .hero-bg { filter: blur(30px) opacity(0.3); transform: scale(1.2); }
+        .hero-content { padding: 32px; display: flex; align-items: flex-end; gap: 24px; position: relative; z-index: 2; background: linear-gradient(to top, #0d1117 0%, transparent 100%); }
+        .hero-icon-big { width: 100px; height: 100px; border-radius: 20px; box-shadow: 0 8px 24px rgba(0,0,0,0.5); }
+        .hero-title { font-size: 2rem; font-weight: 800; line-height: 1.2; margin-bottom: 8px; }
+        
+        /* Tabs Clean */
+        .stTabs [data-baseweb="tab-list"] { gap: 8px; }
+        .stTabs [data-baseweb="tab"] { height: 40px; border-radius: 6px; padding: 0 16px; background-color: transparent; border: none; }
+        .stTabs [aria-selected="true"] { background-color: rgba(88, 166, 255, 0.1); color: var(--accent-primary); }
 
-        /* Lớp nền mờ (Background Blur) */
-        .hero-bg {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background-position: center;
-            background-size: cover;
-            filter: blur(20px) brightness(0.4); /* Làm mờ và tối đi để nổi text */
-            z-index: 1;
-            transform: scale(1.1); /* Zoom nhẹ để tránh viền mờ */
-        }
-
-        /* Lớp phủ Gradient để dễ đọc chữ */
-        .hero-overlay {
-            position: absolute;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: linear-gradient(to right, rgba(14, 17, 23, 0.9) 0%, rgba(14, 17, 23, 0.7) 40%, rgba(14, 17, 23, 0.4) 100%);
-            z-index: 2;
-        }
-
-        /* Nội dung chính (Icon + Text) */
-        .hero-content {
-            position: relative;
-            z-index: 3;
-            padding: 30px;
-            display: flex;
-            align-items: center;
-            gap: 25px;
-        }
-
-        /* Ảnh Icon App */
-        .hero-icon-big {
-            width: 120px;
-            height: 120px;
-            border-radius: 24px;
-            box-shadow: 0 8px 20px rgba(0,0,0,0.6);
-            border: 2px solid rgba(255,255,255,0.1);
-            object-fit: cover;
-            background-color: #000;
-        }
-
-        /* Phần Text */
-        .hero-text-col {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-        }
-
-        .hero-title {
-            font-size: 2.2rem;
-            font-weight: 800;
-            color: #ffffff;
-            line-height: 1.2;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-            font-family: 'Segoe UI', sans-serif;
-        }
-
-        .hero-dev {
-            font-size: 1rem;
-            color: #64b5f6; /* Màu xanh dương nhạt */
-            font-weight: 600;
-            display: flex;
-            align-items: center;
-            gap: 6px;
-        }
-        .hero-dev a { color: #64b5f6; text-decoration: none; }
-        .hero-dev a:hover { text-decoration: underline; color: #9be7ff; }
-
-        /* Badges (Ads / IAP / Free) */
-        .hero-badges {
-            display: flex;
-            gap: 8px;
-            margin-top: 5px;
-        }
-
-        .h-tag {
-            font-size: 0.75rem;
-            padding: 4px 10px;
-            border-radius: 6px;
-            font-weight: 700;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            display: inline-block;
-        }
-
-        .tag-ads { background: rgba(255, 235, 59, 0.15); color: #fff176; border: 1px solid rgba(255, 235, 59, 0.3); }
-        .tag-iap { background: rgba(105, 240, 174, 0.15); color: #b9f6ca; border: 1px solid rgba(105, 240, 174, 0.3); }
-        .tag-free{ background: rgba(33, 150, 243, 0.15); color: #90caf9; border: 1px solid rgba(33, 150, 243, 0.3); }
-        .tag-paid{ background: rgba(255, 82, 82, 0.15);  color: #ff8a80; border: 1px solid rgba(255, 82, 82, 0.3); }
-
-        /* Nút Back tùy chỉnh (Nếu muốn dùng) */
-        .back-btn-container { margin-bottom: 10px; }
-        </style>
+    </style>
     """, unsafe_allow_html=True)

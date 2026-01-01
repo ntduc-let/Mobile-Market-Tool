@@ -11,21 +11,46 @@ from .config import COUNTRIES_LIST
 import textwrap
 
 def render_list_view(df, sel_country_lbl):
-    if not df.empty:
-        st.divider()
-        col_free, col_paid, col_gross = st.columns(3)
-        def render_column(container, header_title, collection_name, key_suffix, header_color):
-            with container:
-                st.markdown(f"""<div style="text-align: center; margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid {header_color};"><h3 style="margin:0; color: {header_color}; text-shadow: 0 0 10px {header_color}80;">{header_title}</h3></div>""", unsafe_allow_html=True)
-                subset = df[df['collection_type'] == collection_name].sort_values('rank')
-                if not subset.empty:
-                    for i, r in enumerate(subset.to_dict('records')):
-                        render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix, theme_color=header_color)
-                else: st.info("Chưa có dữ liệu.")
-        render_column(col_free, "🔥 Top Free", "top_free", "tf", "#00e676")       
-        render_column(col_paid, "💸 Top Paid", "top_paid", "tp", "#2979ff")       
-        render_column(col_gross, "💰 Grossing", "top_grossing", "tg", "#ffab00")
-    else: st.info("👋 Chưa có dữ liệu. Hãy chọn và bấm '🚀 Quét Chart'.")
+    if df.empty:
+        st.info("👋 Chưa có dữ liệu. Hãy chọn và bấm '🚀 Quét Chart' bên thanh trái.")
+        return
+
+    # --- PHẦN MỚI: KPI DASHBOARD ---
+    st.markdown("### 📈 Market Snapshot")
+    kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+    
+    # Tính toán số liệu nhanh
+    total_apps = len(df)
+    avg_score = df['score'].mean()
+    free_count = len(df[df['price'] == 0])
+    paid_count = total_apps - free_count
+    
+    # Render KPI Cards bằng HTML/CSS đã định nghĩa ở styles.py
+    def kpi_html(label, value):
+        return f"""<div class="kpi-card"><div class="kpi-label">{label}</div><div class="kpi-value">{value}</div></div>"""
+
+    with kpi1: st.markdown(kpi_html("Tổng ứng dụng", total_apps), unsafe_allow_html=True)
+    with kpi2: st.markdown(kpi_html("Điểm trung bình", f"{avg_score:.1f} ⭐"), unsafe_allow_html=True)
+    with kpi3: st.markdown(kpi_html("Miễn phí", f"{free_count}"), unsafe_allow_html=True)
+    with kpi4: st.markdown(kpi_html("Trả phí", f"{paid_count}"), unsafe_allow_html=True)
+    
+    st.markdown("---")
+    
+    # --- PHẦN LIST VIEW CŨ (Đã được CSS làm đẹp tự động) ---
+    col_free, col_paid, col_gross = st.columns(3)
+    # ... (Giữ nguyên logic render cột bên dưới của anh)
+    def render_column(container, header_title, collection_name, key_suffix, header_color):
+        with container:
+            # Sửa tiêu đề cho nhỏ gọn hơn
+            st.markdown(f"#### {header_title}") 
+            subset = df[df['collection_type'] == collection_name].sort_values('rank')
+            if not subset.empty:
+                for i, r in enumerate(subset.to_dict('records')):
+                    render_mini_card(r, COUNTRIES_LIST[sel_country_lbl], i, key_suffix)
+    
+    render_column(col_free, "🔥 Top Free", "top_free", "tf", None)       
+    render_column(col_paid, "💸 Top Paid", "top_paid", "tp", None)       
+    render_column(col_gross, "💰 Grossing", "top_grossing", "tg", None)
 
 def render_search_results():
     st.button("⬅️ Quay lại", on_click=lambda: st.session_state.update(view_mode='list'))
