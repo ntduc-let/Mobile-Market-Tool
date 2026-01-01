@@ -4,12 +4,14 @@ from modules.config import CATEGORIES_LIST, COUNTRIES_LIST
 from modules.styles import load_css
 from modules.backend import init_environment, save_data_to_db, load_data_today, run_node_safe_custom
 from modules.views import render_list_view, render_search_results, render_detail_view
+from modules.views import render_list_view, render_detail_view, render_custom_header
 import subprocess # Dùng cho sidebar scraper
 
 # 1. Config
-st.set_page_config(page_title="Mobile Market Analyzer", layout="wide", page_icon="📱")
+st.set_page_config(page_title="Mobile Market Tool", layout="wide", page_icon="📱")
 load_css()
 init_environment()
+render_custom_header()
 
 # 2. Session State
 if 'view_mode' not in st.session_state: st.session_state.view_mode = 'list'

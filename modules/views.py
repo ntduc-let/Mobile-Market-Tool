@@ -10,6 +10,23 @@ from .backend import run_node_safe
 from .config import COUNTRIES_LIST
 import textwrap
 
+def render_custom_header():
+    st.markdown("""
+        <div class="main-header-container">
+            <div class="header-content-wrapper">
+                <div class="header-logo-box">
+                    📱
+                </div>
+                <div class="header-text-col">
+                    <h1 class="header-main-title">Mobile Market Insider</h1>
+                    <p class="header-subtitle">
+                        Phân tích xu hướng, xếp hạng và dữ liệu ứng dụng Android theo thời gian thực.
+                    </p>
+                </div>
+            </div>
+        </div>
+    """, unsafe_allow_html=True)
+
 def render_list_view(df, sel_country_lbl):
     if df.empty:
         st.info("👋 Chưa có dữ liệu. Hãy chọn và bấm '🚀 Quét Chart' bên thanh trái.")

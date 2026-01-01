@@ -95,5 +95,54 @@ def load_css():
         .stTabs [data-baseweb="tab"] { height: 40px; border-radius: 6px; padding: 0 16px; background-color: transparent; border: none; }
         .stTabs [aria-selected="true"] { background-color: rgba(88, 166, 255, 0.1); color: var(--accent-primary); }
 
+        /* --- 5. NEW MODERN HEADER --- */
+        .main-header-container {
+            padding: 24px 0 32px 0;
+            margin-bottom: 24px;
+            border-bottom: 1px solid var(--border-color);
+            /* Tạo nền gradient nhẹ từ trái sang phải */
+            background: linear-gradient(to right, rgba(88, 166, 255, 0.08) 0%, transparent 50%);
+        }
+        
+        .header-content-wrapper {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+        /* Style cho icon logo giả lập (có thể thay bằng ảnh thật) */
+        .header-logo-box {
+            width: 64px; height: 64px;
+            background: linear-gradient(135deg, var(--accent-primary), #8e44ad);
+            border-radius: 16px;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 32px; color: white;
+            box-shadow: 0 8px 16px rgba(88, 166, 255, 0.2);
+        }
+
+        .header-text-col {
+            display: flex; flex-direction: column;
+        }
+
+        /* Tiêu đề chính với hiệu ứng gradient text */
+        .header-main-title {
+            margin: 0;
+            font-size: 2.8rem;
+            font-weight: 900;
+            letter-spacing: -1px;
+            line-height: 1.1;
+            /* Tạo màu chữ gradient chuyển từ trắng sang xanh dương */
+            background: linear-gradient(90deg, #ffffff 0%, var(--accent-primary) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Dòng subtitle phụ */
+        .header-subtitle {
+            margin: 8px 0 0 0;
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            font-weight: 400;
+        }
     </style>
     """, unsafe_allow_html=True)
