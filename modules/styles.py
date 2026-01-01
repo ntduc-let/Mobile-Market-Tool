@@ -95,15 +95,79 @@ def load_css():
         .stTabs [data-baseweb="tab"] { height: 40px; border-radius: 6px; padding: 0 16px; background-color: transparent; border: none; }
         .stTabs [aria-selected="true"] { background-color: rgba(88, 166, 255, 0.1); color: var(--accent-primary); }
 
-        /* --- 5. NEW MODERN HEADER --- */
+        /* --- HEADER CHÍNH (Fix lỗi gradient bị cắt) --- */
         .main-header-container {
             padding: 24px 0 32px 0;
             margin-bottom: 24px;
             border-bottom: 1px solid var(--border-color);
-            /* Tạo nền gradient nhẹ từ trái sang phải */
-            background: linear-gradient(to right, rgba(88, 166, 255, 0.08) 0%, transparent 50%);
+            /* Gradient trải dài 100% thay vì 50% để không bị vệt cắt giữa màn hình */
+            background: linear-gradient(to right, rgba(88, 166, 255, 0.1) 0%, rgba(88, 166, 255, 0.02) 100%);
         }
         
+        /* --- DASHBOARD HEADER (Chứa Badges Quốc gia/Thể loại) --- */
+        .dashboard-header-container {
+            /* Bỏ background tối cũ, dùng border tinh tế hơn */
+            background: transparent;
+            margin-bottom: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px;
+            padding: 10px 0;
+        }
+                
+        .header-badges { 
+            display: flex; gap: 12px; flex-wrap: wrap; 
+        }
+
+        /* Badge thiết kế lại: Phẳng, hiện đại, icon nổi bật */
+        .h-badge { 
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 16px; 
+            border-radius: 12px; 
+            font-size: 0.9rem; 
+            font-weight: 600; 
+            letter-spacing: 0.3px;
+            transition: all 0.2s ease;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+        }
+
+        /* Badge Thể loại (Màu tím neon) */
+        .h-badge.category { 
+            background: linear-gradient(135deg, rgba(123, 31, 162, 0.2), rgba(123, 31, 162, 0.1));
+            border: 1px solid rgba(123, 31, 162, 0.4); 
+            color: #e1bee7; 
+        }
+
+        /* Badge Quốc gia (Màu xanh dương) */
+        .h-badge.country { 
+            background: linear-gradient(135deg, rgba(33, 150, 243, 0.2), rgba(33, 150, 243, 0.1));
+            border: 1px solid rgba(33, 150, 243, 0.4); 
+            color: #90caf9; 
+        }
+                
+        .h-badge:hover { transform: translateY(-2px); filter: brightness(1.2); }
+
+        /* --- EMPTY STATE (Thông báo chưa có dữ liệu đẹp hơn) --- */
+        .empty-state-box {
+            text-align: center;
+            padding: 60px 20px;
+            border: 2px dashed var(--border-color); /* Viền nét đứt */
+            border-radius: 16px;
+            background-color: rgba(22, 27, 34, 0.5);
+            margin-top: 20px;
+        }
+        .empty-icon { font-size: 4rem; margin-bottom: 15px; opacity: 0.8; display: block; animation: float 3s ease-in-out infinite; }
+        .empty-title { font-size: 1.5rem; font-weight: 700; color: #fff; margin-bottom: 8px; }
+        .empty-desc { color: var(--text-secondary); font-size: 1rem; max-width: 500px; margin: 0 auto; }
+        
+        @keyframes float {
+            0% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+            100% { transform: translateY(0px); }
+        }
+
         .header-content-wrapper {
             display: flex;
             align-items: center;

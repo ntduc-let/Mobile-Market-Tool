@@ -29,7 +29,16 @@ def render_custom_header():
 
 def render_list_view(df, sel_country_lbl):
     if df.empty:
-        st.info("👋 Chưa có dữ liệu. Hãy chọn và bấm '🚀 Quét Chart' bên thanh trái.")
+        st.markdown("""
+        <div class="empty-state-box">
+            <div class="empty-icon">📡</div>
+            <div class="empty-title">Chưa có dữ liệu phân tích</div>
+            <div class="empty-desc">
+                Hãy chọn <b>Quốc gia</b> và <b>Thể loại</b> ở menu bên trái, 
+                sau đó bấm nút <span style="color: #58a6ff; font-weight:bold;">🚀 Quét Chart</span> để bắt đầu thu thập dữ liệu thị trường.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
         return
 
     # --- PHẦN MỚI: KPI DASHBOARD ---
